@@ -96,38 +96,38 @@ class AffineCoupling(nn.Module):
 
     def forward(self, input):
         in_a, in_b = input.chunk(2, 1)
-        net_out = self.net(in_b)
 
         if self.affine:
-            log_s, t = self.net(in_b).chunk(2, 1)
+            log_s, t = self.net(in_a).chunk(2, 1)
             # s = torch.exp(log_s)
             s = F.sigmoid(log_s + 2)
             # out_a = s * in_a + t
-            out_a = (in_a + t) * s
+            out_b = (in_b + t) * s
 
             logdet = torch.sum(torch.log(s).view(input.shape[0], -1), 1)
 
         else:
-            out_a = in_a + net_out
+            net_out = self.net(in_a)
+            out_b = in_b + net_out
             logdet = None
 
-        return torch.cat([out_a, in_b], 1), logdet
+        return torch.cat([in_a, out_b], 1), logdet
 
     def reverse(self, output):
         out_a, out_b = output.chunk(2, 1)
-        net_out = self.net(out_b)
 
         if self.affine:
-            log_s, t = self.net(out_b).chunk(2, 1)
+            log_s, t = self.net(out_a).chunk(2, 1)
             # s = torch.exp(log_s)
             s = F.sigmoid(log_s + 2)
             # in_a = (out_a - t) / s
-            in_a = out_a / s - t
+            in_b = out_b / s - t
 
         else:
-            in_a = out_a - net_out
+            net_out = self.net(out_a)
+            in_b = out_b - net_out
 
-        return torch.cat([in_a, out_b], 1)
+        return torch.cat([out_a, in_b], 1)
 
 
 class Flow(nn.Module):
