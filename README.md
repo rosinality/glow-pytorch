@@ -16,3 +16,5 @@ as trainer uses ImageFolder of torchvision, input directory should be structured
 ![Sample](sample.png)
 
 I have trained model on vanilla celebA dataset. Seems like works well. I found that learning rate (I have used 1e-4 without scheduling), learnt prior, number of bits (in this cases, 5), and using sigmoid function at the affine coupling layer instead of exponential function is beneficial to training a model.
+
+In my cases, LU decomposed invertible convolution was much faster than plain version. So I made it default to use LU decomposed version.

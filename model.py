@@ -251,14 +251,14 @@ def gaussian_sample(eps, mean, log_sd):
 
 
 class Block(nn.Module):
-    def __init__(self, in_channel, n_flow, split=True, affine=True):
+    def __init__(self, in_channel, n_flow, split=True, affine=True, conv_lu=True):
         super().__init__()
 
         squeeze_dim = in_channel * 4
 
         self.flows = nn.ModuleList()
         for i in range(n_flow):
-            self.flows.append(Flow(squeeze_dim, affine=affine))
+            self.flows.append(Flow(squeeze_dim, affine=affine, conv_lu=conv_lu))
 
         self.split = split
 
@@ -325,13 +325,13 @@ class Block(nn.Module):
 
 
 class Glow(nn.Module):
-    def __init__(self, in_channel, n_flow, n_block, affine=True):
+    def __init__(self, in_channel, n_flow, n_block, affine=True, conv_lu=True):
         super().__init__()
 
         self.blocks = nn.ModuleList()
         n_channel = in_channel
         for i in range(n_block - 1):
-            self.blocks.append(Block(n_channel, n_flow, affine=affine))
+            self.blocks.append(Block(n_channel, n_flow, affine=affine, conv_lu=conv_lu))
             n_channel *= 2
         self.blocks.append(Block(n_channel, n_flow, split=False, affine=affine))
 
