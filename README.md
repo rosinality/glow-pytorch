@@ -19,6 +19,6 @@ I have trained model on vanilla celebA dataset. Seems like works well. I found t
 
 In my cases, LU decomposed invertible convolution was much faster than plain version. So I made it default to use LU decomposed version.
 
-[![Progression of samples during training](https://img.youtube.com/vi/bvQMeo6xCyA/0.jpg)](https://youtu.be/bvQMeo6xCyA)
+![Progression of samples](progression.gif)
 
 Progression of samples during training. (YouTube link) Sampled once per 100 iterations during training.
