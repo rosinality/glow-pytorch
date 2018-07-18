@@ -2,28 +2,42 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from math import log, pi, exp
+import numpy as np
+from scipy import linalg as la
 
 logabs = lambda x: torch.log(torch.abs(x))
 
 
 class ActNorm(nn.Module):
-    def __init__(self, in_channel):
+    def __init__(self, in_channel, logdet=True):
         super().__init__()
 
         self.loc = nn.Parameter(torch.zeros(1, in_channel, 1, 1))
         self.scale = nn.Parameter(torch.ones(1, in_channel, 1, 1))
 
         self.initialized = False
+        self.logdet = logdet
 
     def initialize(self, input):
-        flatten = input.permute(1, 0, 2, 3).contiguous().view(input.shape[1], -1)
-        mean = (
-            flatten.mean(1).unsqueeze(1).unsqueeze(2).unsqueeze(3).permute(1, 0, 2, 3)
-        )
-        std = flatten.std(1).unsqueeze(1).unsqueeze(2).unsqueeze(3).permute(1, 0, 2, 3)
+        with torch.no_grad():
+            flatten = input.permute(1, 0, 2, 3).contiguous().view(input.shape[1], -1)
+            mean = (
+                flatten.mean(1)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .unsqueeze(3)
+                .permute(1, 0, 2, 3)
+            )
+            std = (
+                flatten.std(1)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .unsqueeze(3)
+                .permute(1, 0, 2, 3)
+            )
 
-        self.loc.data.copy_(-mean)
-        self.scale.data.copy_(1 / (torch.sqrt(std) + 1e-6))
+            self.loc.data.copy_(-mean)
+            self.scale.data.copy_(1 / (std + 1e-6))
 
     def forward(self, input):
         _, _, height, width = input.shape
@@ -32,9 +46,15 @@ class ActNorm(nn.Module):
             self.initialize(input)
             self.initialized = True
 
-        logdet = height * width * torch.sum(logabs(self.scale))
+        log_abs = logabs(self.scale)
 
-        return self.scale * (input + self.loc), logdet
+        logdet = height * width * torch.sum(log_abs)
+
+        if self.logdet:
+            return self.scale * (input + self.loc), logdet
+
+        else:
+            return self.scale * (input + self.loc)
 
     def reverse(self, output):
         return output / self.scale - self.loc
@@ -51,9 +71,10 @@ class InvConv2d(nn.Module):
 
     def forward(self, input):
         _, _, height, width = input.shape
+
         out = F.conv2d(input, self.weight)
         logdet = (
-            height * width * logabs(torch.det(self.weight.squeeze().double())).float()
+            height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
         )
 
         return out, logdet
@@ -64,17 +85,69 @@ class InvConv2d(nn.Module):
         )
 
 
-class ZeroConv2d(nn.Module):
-    def __init__(self, in_channel, out_channel):
+class InvConv2dLU(nn.Module):
+    def __init__(self, in_channel):
         super().__init__()
 
-        self.conv = nn.Conv2d(in_channel, out_channel, 3, padding=1)
+        weight = np.random.randn(in_channel, in_channel)
+        q, _ = la.qr(weight)
+        w_p, w_l, w_u = la.lu(q.astype(np.float32))
+        w_s = np.diag(w_u)
+        w_u = np.triu(w_u, 1)
+        u_mask = np.triu(np.ones_like(w_u), 1)
+        l_mask = u_mask.T
+
+        w_p = torch.from_numpy(w_p)
+        w_l = torch.from_numpy(w_l)
+        w_s = torch.from_numpy(w_s)
+        w_u = torch.from_numpy(w_u)
+
+        self.register_buffer('w_p', w_p)
+        self.register_buffer('u_mask', torch.from_numpy(u_mask))
+        self.register_buffer('l_mask', torch.from_numpy(l_mask))
+        self.register_buffer('s_sign', torch.sign(w_s))
+        self.register_buffer('l_eye', torch.eye(l_mask.shape[0]))
+        self.w_l = nn.Parameter(w_l)
+        self.w_s = nn.Parameter(logabs(w_s))
+        self.w_u = nn.Parameter(w_u)
+
+    def forward(self, input):
+        _, _, height, width = input.shape
+
+        weight = self.calc_weight()
+
+        out = F.conv2d(input, weight)
+        logdet = height * width * sum(self.w_s)
+
+        return out, logdet
+
+    def calc_weight(self):
+        weight = (
+            self.w_p
+            @ (self.w_l * self.l_mask + self.l_eye)
+            @ ((self.w_u * self.u_mask) + torch.diag(self.s_sign * torch.exp(self.w_s)))
+        )
+
+        return weight.unsqueeze(2).unsqueeze(3)
+
+    def reverse(self, output):
+        weight = self.calc_weight()
+
+        return F.conv2d(output, weight.squeeze().inverse().unsqueeze(2).unsqueeze(3))
+
+
+class ZeroConv2d(nn.Module):
+    def __init__(self, in_channel, out_channel, padding=1):
+        super().__init__()
+
+        self.conv = nn.Conv2d(in_channel, out_channel, 3, padding=0)
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
         self.scale = nn.Parameter(torch.zeros(1, out_channel, 1, 1))
 
     def forward(self, input):
-        out = self.conv(input)
+        out = F.pad(input, [1, 1, 1, 1], value=1)
+        out = self.conv(out)
         out = out * torch.exp(self.scale * 3)
 
         return out
@@ -93,6 +166,12 @@ class AffineCoupling(nn.Module):
             nn.ReLU(),
             ZeroConv2d(filter_size, in_channel if self.affine else in_channel // 2),
         )
+
+        self.net[0].weight.data.normal_(0, 0.05)
+        self.net[0].bias.data.zero_()
+
+        self.net[2].weight.data.normal_(0, 0.05)
+        self.net[2].bias.data.zero_()
 
     def forward(self, input):
         in_a, in_b = input.chunk(2, 1)
@@ -131,11 +210,17 @@ class AffineCoupling(nn.Module):
 
 
 class Flow(nn.Module):
-    def __init__(self, in_channel, affine=True):
+    def __init__(self, in_channel, affine=True, conv_lu=True):
         super().__init__()
 
         self.actnorm = ActNorm(in_channel)
-        self.invconv = InvConv2d(in_channel)
+
+        if conv_lu:
+            self.invconv = InvConv2dLU(in_channel)
+
+        else:
+            self.invconv = InvConv2d(in_channel)
+
         self.coupling = AffineCoupling(in_channel, affine=affine)
 
     def forward(self, input):
@@ -206,6 +291,7 @@ class Block(nn.Module):
             mean, log_sd = self.prior(zero).chunk(2, 1)
             log_p = gaussian_log_p(out, mean, log_sd)
             log_p = log_p.view(b_size, -1).sum(1)
+            z_new = out
 
         return out, logdet, log_p
 
@@ -218,7 +304,9 @@ class Block(nn.Module):
             input = torch.cat([output, z], 1)
 
         else:
-            mean, log_sd = self.prior(torch.zeros_like(input)).chunk(2, 1)
+            zero = torch.zeros_like(input)
+            # zero = F.pad(zero, [1, 1, 1, 1], value=1)
+            mean, log_sd = self.prior(zero).chunk(2, 1)
             z = gaussian_sample(eps, mean, log_sd)
             input = z
 
