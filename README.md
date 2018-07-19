@@ -1,9 +1,9 @@
 # glow-pytorch
-PyTorch implementation of Glow (https://arxiv.org/abs/1807.03039)
+PyTorch implementation of Glow, Generative Flow with Invertible 1x1 Convolutions (https://arxiv.org/abs/1807.03039)
 
 Usage:
 
-> python train.py PATh
+> python train.py PATH
 
 as trainer uses ImageFolder of torchvision, input directory should be structured like this even when there are only 1 classes. (Currently this implementation does not incorporate class classification loss.)
 
