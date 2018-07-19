@@ -21,4 +21,4 @@ In my cases, LU decomposed invertible convolution was much faster than plain ver
 
 ![Progression of samples](progression.gif)
 
-Progression of samples during training. (YouTube link) Sampled once per 100 iterations during training.
+Progression of samples during training. Sampled once per 100 iterations during training.
