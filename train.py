@@ -108,7 +108,13 @@ def train(args, model, optimizer):
         for i in pbar:
             image, _ = next(dataset)
             image = image.to(device)
-            log_p, logdet = model(image + torch.rand_like(image) / n_bins)
+
+            if i == 0:
+                log_p, logdet = model.module(image + torch.rand_like(image) / n_bins)
+
+            else:
+                log_p, logdet = model(image + torch.rand_like(image) / n_bins)
+
             loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
             model.zero_grad()
             loss.backward()
@@ -147,8 +153,8 @@ if __name__ == '__main__':
     model_single = Glow(
         3, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
     )
-    # model = nn.DataParallel(model_single)
-    model = model_single
+    model = nn.DataParallel(model_single)
+    # model = model_single
     model = model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
