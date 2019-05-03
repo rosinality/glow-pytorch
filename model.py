@@ -15,7 +15,7 @@ class ActNorm(nn.Module):
         self.loc = nn.Parameter(torch.zeros(1, in_channel, 1, 1))
         self.scale = nn.Parameter(torch.ones(1, in_channel, 1, 1))
 
-        self.initialized = False
+        self.register_buffer('initialized', torch.tensor(0, dtype=torch.uint8))
         self.logdet = logdet
 
     def initialize(self, input):
@@ -42,9 +42,9 @@ class ActNorm(nn.Module):
     def forward(self, input):
         _, _, height, width = input.shape
 
-        if not self.initialized:
+        if self.initialized.item() == 0:
             self.initialize(input)
-            self.initialized = True
+            self.initialized.fill_(1)
 
         log_abs = logabs(self.scale)
 
