@@ -110,7 +110,7 @@ def train(args, model, optimizer):
             image = image.to(device)
 
             if i == 0:
-                log_p, logdet = model.module(image + torch.rand_like(image) / n_bins)
+                log_p, logdet, _ = model.module(image + torch.rand_like(image) / n_bins)
 
             else:
                 log_p, logdet, _ = model(image + torch.rand_like(image) / n_bins)
