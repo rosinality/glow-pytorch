@@ -113,7 +113,7 @@ def train(args, model, optimizer):
                 log_p, logdet = model.module(image + torch.rand_like(image) / n_bins)
 
             else:
-                log_p, logdet = model(image + torch.rand_like(image) / n_bins)
+                log_p, logdet, _ = model(image + torch.rand_like(image) / n_bins)
 
             loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
             model.zero_grad()

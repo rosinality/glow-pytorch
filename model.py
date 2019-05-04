@@ -293,22 +293,30 @@ class Block(nn.Module):
             log_p = log_p.view(b_size, -1).sum(1)
             z_new = out
 
-        return out, logdet, log_p
+        return out, logdet, log_p, z_new
 
-    def reverse(self, output, eps=None):
+    def reverse(self, output, eps=None, reconstruct=False):
         input = output
 
-        if self.split:
-            mean, log_sd = self.prior(input).chunk(2, 1)
-            z = gaussian_sample(eps, mean, log_sd)
-            input = torch.cat([output, z], 1)
+        if reconstruct:
+            if self.split:
+                input = torch.cat([output, eps], 1)
+
+            else:
+                input = eps
 
         else:
-            zero = torch.zeros_like(input)
-            # zero = F.pad(zero, [1, 1, 1, 1], value=1)
-            mean, log_sd = self.prior(zero).chunk(2, 1)
-            z = gaussian_sample(eps, mean, log_sd)
-            input = z
+            if self.split:
+                mean, log_sd = self.prior(input).chunk(2, 1)
+                z = gaussian_sample(eps, mean, log_sd)
+                input = torch.cat([output, z], 1)
+
+            else:
+                zero = torch.zeros_like(input)
+                # zero = F.pad(zero, [1, 1, 1, 1], value=1)
+                mean, log_sd = self.prior(zero).chunk(2, 1)
+                z = gaussian_sample(eps, mean, log_sd)
+                input = z
 
         for flow in self.flows[::-1]:
             input = flow.reverse(input)
@@ -339,22 +347,24 @@ class Glow(nn.Module):
         log_p_sum = 0
         logdet = 0
         out = input
+        z_outs = []
 
         for block in self.blocks:
-            out, det, log_p = block(out)
+            out, det, log_p, z_new = block(out)
+            z_outs.append(z_new)
             logdet = logdet + det
 
             if log_p is not None:
                 log_p_sum = log_p_sum + log_p
 
-        return log_p_sum, logdet
+        return log_p_sum, logdet, z_outs
 
-    def reverse(self, z_list):
+    def reverse(self, z_list, reconstruct=False):
         for i, block in enumerate(self.blocks[::-1]):
             if i == 0:
-                input = block.reverse(z_list[-1], z_list[-1])
+                input = block.reverse(z_list[-1], z_list[-1], reconstruct=reconstruct)
 
             else:
-                input = block.reverse(input, z_list[-(i + 1)])
+                input = block.reverse(input, z_list[-(i + 1)], reconstruct=reconstruct)
 
         return input
