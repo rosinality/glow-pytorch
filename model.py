@@ -161,9 +161,9 @@ class AffineCoupling(nn.Module):
 
         self.net = nn.Sequential(
             nn.Conv2d(in_channel // 2, filter_size, 3, padding=1),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Conv2d(filter_size, filter_size, 1),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             ZeroConv2d(filter_size, in_channel if self.affine else in_channel // 2),
         )
 
