@@ -117,7 +117,7 @@ class InvConv2dLU(nn.Module):
         weight = self.calc_weight()
 
         out = F.conv2d(input, weight)
-        logdet = height * width * sum(self.w_s)
+        logdet = height * width * torch.sum(self.w_s)
 
         return out, logdet
 
