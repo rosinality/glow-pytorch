@@ -35,6 +35,8 @@ parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
 parser.add_argument('--img_size', default=64, type=int, help='image size')
 parser.add_argument('--temp', default=0.7, type=float, help='temperature of sampling')
 parser.add_argument('--n_sample', default=20, type=int, help='number of samples')
+parser.add_argument('--delta', default=0.01, type=float,
+                    help='standard deviation of the de-quantizing noise')
 parser.add_argument('path', metavar='PATH', type=str, help='Path to image directory')
 
 
@@ -43,7 +45,6 @@ def sample_data(path, batch_size, image_size):
         [
             transforms.Resize(image_size),
             transforms.CenterCrop(image_size),
-            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (1, 1, 1)),
         ]
@@ -111,12 +112,12 @@ def train(args, model, optimizer):
 
             if i == 0:
                 with torch.no_grad():
-                    log_p, logdet, _ = model.module(image + torch.rand_like(image) / n_bins)
+                    log_p, logdet, _ = model.module(image + torch.randn_like(image) * args.delta)
 
                     continue
 
             else:
-                log_p, logdet, _ = model(image + torch.rand_like(image) / n_bins)
+                log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
 
             logdet = logdet.mean()
 
@@ -132,24 +133,37 @@ def train(args, model, optimizer):
                 f'Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}'
             )
 
-            if i % 100 == 0:
+            if (i + 1) % 100 == 0:
                 with torch.no_grad():
                     utils.save_image(
                         model_single.reverse(z_sample).cpu().data,
-                        f'sample/{str(i + 1).zfill(6)}.png',
+                        f'sample/{str(args.delta)}_{str(i + 1).zfill(6)}.png',
                         normalize=True,
                         nrow=10,
                         range=(-0.5, 0.5),
                     )
 
-            if i % 10000 == 0:
-                torch.save(
-                    model.state_dict(), f'checkpoint/model_{str(i + 1).zfill(6)}.pt'
-                )
-                torch.save(
-                    optimizer.state_dict(), f'checkpoint/optim_{str(i + 1).zfill(6)}.pt'
-                )
+            # if (i+1) % 10000 == 0:
+            #     torch.save(
+            #         model.state_dict(), f'checkpoint/model_{str(i + 1).zfill(6)}_{str(args.delta)}.pt'
+            #     )
+                # torch.save(
+                #     optimizer.state_dict(), f'checkpoint/optim_{str(i + 1).zfill(6)}.pt'
+                # )
+    torch.save(
+        model.state_dict(), f'checkpoint/model_{str(args.delta)}_.pt'
+    )
 
+    f = open(f'll/ll_{str(args.delta)}_.txt', 'w')
+    for i in range(100):
+        with torch.no_grad():
+            image, _ = next(dataset)
+            image = image.to(device)
+            log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
+            logdet = logdet.mean()
+            loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
+            print(args.delta, log_p.item(), log_det.item(), file=f)
+    f.close()
 
 if __name__ == '__main__':
     args = parser.parse_args()
