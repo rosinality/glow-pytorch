@@ -10,19 +10,17 @@ from samplers import memory_mnist
 from utils import net_args, calc_z_shapes, calc_loss
 
 device = 'cuda:0'
-N_DIM = 1
 
 parser = net_args(argparse.ArgumentParser(description='Glow trainer'))
 parser.add_argument('path', metavar='PATH', type=str, help='Path to image directory')
 
 
 def train(args, model, optimizer):
-    #     dataset = iter(sample_data(args.path, args.batch, args.img_size))
     dataset = iter(memory_mnist(args.batch, args.img_size))
     n_bins = 2. ** args.n_bits
 
     z_sample = []
-    z_shapes = calc_z_shapes(N_DIM, args.img_size, args.n_flow, args.n_block)
+    z_shapes = calc_z_shapes(args.n_channels, args.img_size, args.n_flow, args.n_block)
     for z in z_shapes:
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
@@ -75,7 +73,7 @@ def train(args, model, optimizer):
             image = image.to(device)
             log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
             logdet = logdet.mean()
-            loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
+            loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins, args.n_channels)
             print(args.delta, log_p.item(), log_det.item(), file=f)
     f.close()
 
@@ -85,7 +83,7 @@ if __name__ == '__main__':
     print(args)
 
     model_single = Glow(
-        N_DIM, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
+        args.n_channels, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
     )
     model = model_single
     model = model.to(device)

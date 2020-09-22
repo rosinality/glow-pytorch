@@ -1,10 +1,9 @@
 from math import log
 
-from train import N_DIM
-
 
 def net_args(parser):
     parser.add_argument('--batch', default=16, type=int, help='batch size')
+    parser.add_argument('--n_channels', default=1, type=int, help='number of image channels')
     parser.add_argument('--iter', default=200000, type=int, help='maximum iterations')
     parser.add_argument(
         '--n_flow', default=32, type=int, help='number of flows in each block'
@@ -44,9 +43,8 @@ def calc_z_shapes(n_channel, input_size, n_flow, n_block):
     return z_shapes
 
 
-def calc_loss(log_p, logdet, image_size, n_bins):
-    # log_p = calc_log_p([z_list])
-    n_pixel = image_size * image_size * N_DIM
+def calc_loss(log_p, logdet, image_size, n_bins, n_dim):
+    n_pixel = image_size * image_size * n_dim
 
     loss = -log(n_bins) * n_pixel
     loss = loss + logdet + log_p
