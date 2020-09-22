@@ -81,7 +81,7 @@ def train(args, model, optimizer):
             )
             print(args.delta, log_p.item(), log_det.item(), file=f)
     f.close()
-    f = open(f"ll/losses_plot.txt", "w")
+    f = open(f"ll/losses_{str(args.delta)}_.txt", "w")
     print("\n".join(losses), file=f)
     f.close()
 
