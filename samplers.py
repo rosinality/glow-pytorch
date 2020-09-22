@@ -3,16 +3,14 @@ import torchvision
 from torch.utils.data import DataLoader
 from torchvision import transforms, datasets
 
-from train import N_DIM
 
-
-def sample_data(path, batch_size, image_size):
+def sample_data(path, batch_size, image_size, n_channels):
     transform = transforms.Compose(
         [
             transforms.Resize(image_size),
             transforms.CenterCrop(image_size),
             transforms.ToTensor(),
-            transforms.Normalize((0.5,) * N_DIM, (1,) * N_DIM),
+            transforms.Normalize((0.5,) * n_channels, (1,) * n_channels),
         ]
     )
 
@@ -32,13 +30,13 @@ def sample_data(path, batch_size, image_size):
             yield next(loader)
 
 
-def memory_mnist(batch_size, image_size):
+def memory_mnist(batch_size, image_size, n_channels):
     transform = transforms.Compose(
         [
             transforms.Resize(image_size),
             transforms.CenterCrop(image_size),
             transforms.ToTensor(),
-            transforms.Normalize((0.5,) * N_DIM, (1,) * N_DIM),
+            transforms.Normalize((0.5,) * n_channels, (1,) * n_channels),
         ]
     )
     train_loader = torch.utils.data.DataLoader(

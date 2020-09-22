@@ -3,7 +3,7 @@ import argparse
 import torch
 
 from model import Glow
-from samplers import sample_data
+from samplers import sample_data, memory_mnist
 from utils import net_args, calc_loss
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -15,7 +15,7 @@ parser.add_argument('path', metavar='PATH', type=str, help='Path to image direct
 
 
 def test(args, model):
-    dataset = iter(sample_data(args.path, args.batch * 10, args.img_size))
+    dataset = iter(memory_mnist(args.batch * 10, args.img_size, args.n_channels))
     model.eval()
     n_bins = 2. ** args.n_bits
     f = open(f'./test/ll_{str(args.delta)}_.txt', 'w')

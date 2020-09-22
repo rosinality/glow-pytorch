@@ -16,7 +16,7 @@ parser.add_argument('path', metavar='PATH', type=str, help='Path to image direct
 
 
 def train(args, model, optimizer):
-    dataset = iter(memory_mnist(args.batch, args.img_size))
+    dataset = iter(memory_mnist(args.batch, args.img_size, args.n_channels))
     n_bins = 2. ** args.n_bits
 
     z_sample = []
@@ -42,7 +42,7 @@ def train(args, model, optimizer):
 
             logdet = logdet.mean()
 
-            loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
+            loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins, args.n_channels)
             optimizer.zero_grad()
             loss.backward()
             warmup_lr = args.lr
