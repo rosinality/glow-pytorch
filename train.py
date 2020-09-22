@@ -1,132 +1,19 @@
-from tqdm import tqdm
-import numpy as np
-from PIL import Image
-from math import log, sqrt, pi
-
 import argparse
 
 import torch
-from torch import nn, optim
-from torch.autograd import Variable, grad
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms, utils
-import torchvision
+from torch import optim
+from torchvision import utils
+from tqdm import tqdm
 
 from model import Glow
+from samplers import memory_mnist
+from utils import net_args, calc_z_shapes, calc_loss
 
 device = 'cuda:0'
 N_DIM = 1
 
-parser = argparse.ArgumentParser(description='Glow trainer')
-parser.add_argument('--batch', default=16, type=int, help='batch size')
-parser.add_argument('--iter', default=200000, type=int, help='maximum iterations')
-parser.add_argument(
-    '--n_flow', default=32, type=int, help='number of flows in each block'
-)
-parser.add_argument('--n_block', default=4, type=int, help='number of blocks')
-parser.add_argument(
-    '--no_lu',
-    action='store_true',
-    help='use plain convolution instead of LU decomposed version',
-)
-parser.add_argument(
-    '--affine', action='store_true', help='use affine coupling instead of additive'
-)
-parser.add_argument('--n_bits', default=5, type=int, help='number of bits')
-parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
-parser.add_argument('--img_size', default=64, type=int, help='image size')
-parser.add_argument('--temp', default=0.7, type=float, help='temperature of sampling')
-parser.add_argument('--n_sample', default=20, type=int, help='number of samples')
-parser.add_argument('--delta', default=0.01, type=float,
-                    help='standard deviation of the de-quantizing noise')
+parser = net_args(argparse.ArgumentParser(description='Glow trainer'))
 parser.add_argument('path', metavar='PATH', type=str, help='Path to image directory')
-
-
-def sample_data(path, batch_size, image_size):
-    transform = transforms.Compose(
-        [
-            transforms.Resize(image_size),
-            transforms.CenterCrop(image_size),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,) * N_DIM, (1,) * N_DIM),
-        ]
-    )
-
-    dataset = datasets.ImageFolder(path, transform=transform)
-    loader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_workers=8)
-    loader = iter(loader)
-
-    while True:
-        try:
-            yield next(loader)
-
-        except StopIteration:
-            loader = DataLoader(
-                dataset, shuffle=True, batch_size=batch_size, num_workers=4
-            )
-            loader = iter(loader)
-            yield next(loader)
-
-
-def memory_mnist(batch_size, image_size):
-    transform = transforms.Compose(
-        [
-            transforms.Resize(image_size),
-            transforms.CenterCrop(image_size),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,) * N_DIM, (1,) * N_DIM),
-        ]
-    )
-    train_loader = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST('~/users/pt/files/', train=True, download=True,
-                                   transform=transform
-                                   ),
-        batch_size=batch_size, shuffle=True)
-
-    loader = iter(train_loader)
-
-    while True:
-        try:
-            yield next(loader)
-
-        except StopIteration:
-            train_loader = torch.utils.data.DataLoader(
-                torchvision.datasets.MNIST('~/users/pt/files/', train=True,
-                                           download=True,
-                                           transform=transform
-                                           ),
-                batch_size=batch_size, shuffle=True)
-            loader = iter(train_loader)
-            yield next(loader)
-
-
-def calc_z_shapes(n_channel, input_size, n_flow, n_block):
-    z_shapes = []
-
-    for i in range(n_block - 1):
-        input_size //= 2
-        n_channel *= 2
-
-        z_shapes.append((n_channel, input_size, input_size))
-
-    input_size //= 2
-    z_shapes.append((n_channel * 4, input_size, input_size))
-
-    return z_shapes
-
-
-def calc_loss(log_p, logdet, image_size, n_bins):
-    # log_p = calc_log_p([z_list])
-    n_pixel = image_size * image_size * N_DIM
-
-    loss = -log(n_bins) * n_pixel
-    loss = loss + logdet + log_p
-
-    return (
-        (-loss / (log(2) * n_pixel)).mean(),
-        (log_p / (log(2) * n_pixel)).mean(),
-        (logdet / (log(2) * n_pixel)).mean(),
-    )
 
 
 def train(args, model, optimizer):
@@ -160,7 +47,6 @@ def train(args, model, optimizer):
             loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
             optimizer.zero_grad()
             loss.backward()
-            # warmup_lr = args.lr * min(1, i * batch_size / (50000 * 10))
             warmup_lr = args.lr
             optimizer.param_groups[0]['lr'] = warmup_lr
             optimizer.step()
@@ -178,14 +64,6 @@ def train(args, model, optimizer):
                         nrow=10,
                         range=(-0.5, 0.5),
                     )
-
-            # if (i+1) % 10000 == 0:
-            #     torch.save(
-            #         model.state_dict(), f'checkpoint/model_{str(i + 1).zfill(6)}_{str(args.delta)}.pt'
-            #     )
-            # torch.save(
-            #     optimizer.state_dict(), f'checkpoint/optim_{str(i + 1).zfill(6)}.pt'
-            # )
     torch.save(
         model.state_dict(), f'checkpoint/model_{str(args.delta)}_.pt'
     )
@@ -209,7 +87,6 @@ if __name__ == '__main__':
     model_single = Glow(
         N_DIM, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
     )
-    #     model = nn.DataParallel(model_single)
     model = model_single
     model = model.to(device)
 
