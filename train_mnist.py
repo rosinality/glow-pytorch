@@ -25,6 +25,7 @@ def train(args, model, optimizer):
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
 
+    losses = []
     with tqdm(range(args.iter)) as pbar:
         for i in pbar:
             image, _ = next(dataset)
@@ -48,6 +49,7 @@ def train(args, model, optimizer):
             )
             optimizer.zero_grad()
             loss.backward()
+            losses.append(loss.item())
             warmup_lr = args.lr
             optimizer.param_groups[0]["lr"] = warmup_lr
             optimizer.step()
@@ -78,6 +80,9 @@ def train(args, model, optimizer):
                 log_p, logdet, args.img_size, n_bins, args.n_channels
             )
             print(args.delta, log_p.item(), log_det.item(), file=f)
+    f.close()
+    f = open(f"ll/losses_plot.txt", "w")
+    print("\n".join(losses), file=f)
     f.close()
 
 
