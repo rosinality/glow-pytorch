@@ -10,10 +10,12 @@ from torch import nn, optim
 from torch.autograd import Variable, grad
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, utils
+import torchvision
 
 from model import Glow
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cuda:0'
+N_DIM = 1
 
 parser = argparse.ArgumentParser(description='Glow trainer')
 parser.add_argument('--batch', default=16, type=int, help='batch size')
@@ -46,12 +48,12 @@ def sample_data(path, batch_size, image_size):
             transforms.Resize(image_size),
             transforms.CenterCrop(image_size),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (1, 1, 1)),
+            transforms.Normalize((0.5,) * N_DIM, (1,) * N_DIM),
         ]
     )
 
     dataset = datasets.ImageFolder(path, transform=transform)
-    loader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_workers=4)
+    loader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_workers=8)
     loader = iter(loader)
 
     while True:
@@ -63,6 +65,38 @@ def sample_data(path, batch_size, image_size):
                 dataset, shuffle=True, batch_size=batch_size, num_workers=4
             )
             loader = iter(loader)
+            yield next(loader)
+
+
+def memory_mnist(batch_size, image_size):
+    transform = transforms.Compose(
+        [
+            transforms.Resize(image_size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,) * N_DIM, (1,) * N_DIM),
+        ]
+    )
+    train_loader = torch.utils.data.DataLoader(
+        torchvision.datasets.MNIST('~/users/pt/files/', train=True, download=True,
+                                   transform=transform
+                                   ),
+        batch_size=batch_size, shuffle=True)
+
+    loader = iter(train_loader)
+
+    while True:
+        try:
+            yield next(loader)
+
+        except StopIteration:
+            train_loader = torch.utils.data.DataLoader(
+                torchvision.datasets.MNIST('~/users/pt/files/', train=True,
+                                           download=True,
+                                           transform=transform
+                                           ),
+                batch_size=batch_size, shuffle=True)
+            loader = iter(train_loader)
             yield next(loader)
 
 
@@ -83,7 +117,7 @@ def calc_z_shapes(n_channel, input_size, n_flow, n_block):
 
 def calc_loss(log_p, logdet, image_size, n_bins):
     # log_p = calc_log_p([z_list])
-    n_pixel = image_size * image_size * 3
+    n_pixel = image_size * image_size * N_DIM
 
     loss = -log(n_bins) * n_pixel
     loss = loss + logdet + log_p
@@ -96,11 +130,12 @@ def calc_loss(log_p, logdet, image_size, n_bins):
 
 
 def train(args, model, optimizer):
-    dataset = iter(sample_data(args.path, args.batch, args.img_size))
+    #     dataset = iter(sample_data(args.path, args.batch, args.img_size))
+    dataset = iter(memory_mnist(args.batch, args.img_size))
     n_bins = 2. ** args.n_bits
 
     z_sample = []
-    z_shapes = calc_z_shapes(3, args.img_size, args.n_flow, args.n_block)
+    z_shapes = calc_z_shapes(N_DIM, args.img_size, args.n_flow, args.n_block)
     for z in z_shapes:
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
@@ -112,7 +147,8 @@ def train(args, model, optimizer):
 
             if i == 0:
                 with torch.no_grad():
-                    log_p, logdet, _ = model.module(image + torch.randn_like(image) * args.delta)
+                    log_p, logdet, _ = model(
+                        image + torch.randn_like(image) * args.delta)
 
                     continue
 
@@ -122,7 +158,7 @@ def train(args, model, optimizer):
             logdet = logdet.mean()
 
             loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
-            model.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
             # warmup_lr = args.lr * min(1, i * batch_size / (50000 * 10))
             warmup_lr = args.lr
@@ -136,7 +172,7 @@ def train(args, model, optimizer):
             if (i + 1) % 100 == 0:
                 with torch.no_grad():
                     utils.save_image(
-                        model_single.reverse(z_sample).cpu().data,
+                        model.reverse(z_sample).cpu().data,
                         f'sample/{str(args.delta)}_{str(i + 1).zfill(6)}.png',
                         normalize=True,
                         nrow=10,
@@ -147,9 +183,9 @@ def train(args, model, optimizer):
             #     torch.save(
             #         model.state_dict(), f'checkpoint/model_{str(i + 1).zfill(6)}_{str(args.delta)}.pt'
             #     )
-                # torch.save(
-                #     optimizer.state_dict(), f'checkpoint/optim_{str(i + 1).zfill(6)}.pt'
-                # )
+            # torch.save(
+            #     optimizer.state_dict(), f'checkpoint/optim_{str(i + 1).zfill(6)}.pt'
+            # )
     torch.save(
         model.state_dict(), f'checkpoint/model_{str(args.delta)}_.pt'
     )
@@ -165,15 +201,16 @@ def train(args, model, optimizer):
             print(args.delta, log_p.item(), log_det.item(), file=f)
     f.close()
 
+
 if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
     model_single = Glow(
-        3, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
+        N_DIM, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
     )
-    model = nn.DataParallel(model_single)
-    # model = model_single
+    #     model = nn.DataParallel(model_single)
+    model = model_single
     model = model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
