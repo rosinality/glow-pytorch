@@ -40,10 +40,12 @@ def memory_mnist(batch_size, image_size, n_channels):
         ]
     )
     train_loader = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST('~/users/pt/files/', train=True, download=True,
-                                   transform=transform
-                                   ),
-        batch_size=batch_size, shuffle=True)
+        torchvision.datasets.MNIST(
+            "~/users/pt/files/", train=True, download=True, transform=transform
+        ),
+        batch_size=batch_size,
+        shuffle=True,
+    )
 
     loader = iter(train_loader)
 
@@ -53,10 +55,11 @@ def memory_mnist(batch_size, image_size, n_channels):
 
         except StopIteration:
             train_loader = torch.utils.data.DataLoader(
-                torchvision.datasets.MNIST('~/users/pt/files/', train=True,
-                                           download=True,
-                                           transform=transform
-                                           ),
-                batch_size=batch_size, shuffle=True)
+                torchvision.datasets.MNIST(
+                    "~/users/pt/files/", train=True, download=True, transform=transform
+                ),
+                batch_size=batch_size,
+                shuffle=True,
+            )
             loader = iter(train_loader)
             yield next(loader)
