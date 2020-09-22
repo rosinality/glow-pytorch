@@ -56,7 +56,7 @@ def train(args, model, optimizer):
                 f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}"
             )
 
-            if (i + 1) % 100 == 0:
+            if (i + 1) % 1000 == 0:
                 with torch.no_grad():
                     utils.save_image(
                         model.reverse(z_sample).cpu().data,
