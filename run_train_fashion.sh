@@ -1,4 +1,4 @@
-for d in `cat ./parameters/mnist.deltas`
+for d in `cat ./parameters/fashion.deltas`
 do
-    python train.py --delta="$d" `cat ./parameters/mnist.params`
+    python train.py --delta="$d" `cat ./parameters/fashion.params`
 done
