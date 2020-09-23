@@ -6,17 +6,21 @@ from torchvision import utils
 from tqdm import tqdm
 
 from model import Glow
-from samplers import memory_mnist
+from samplers import memory_mnist, memory_fashion
 from utils import net_args, calc_z_shapes, calc_loss
 
 device = "cuda:0"
 
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
-parser.add_argument("path", metavar="PATH", type=str, help="Path to image directory")
+# parser.add_argument("path", metavar="PATH", type=str, help="Path to image directory")
 
 
 def train(args, model, optimizer):
-    dataset = iter(memory_mnist(args.batch, args.img_size, args.n_channels))
+    if args.dataset == "mnist":
+        dataset_f = memory_mnist
+    elif args.dataset == "fashion_mnist":
+        dataset_f = memory_fashion
+    dataset = iter(dataset_f(args.batch, args.img_size, args.n_channels))
     n_bins = 2.0 ** args.n_bits
 
     z_sample = []

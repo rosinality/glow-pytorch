@@ -26,17 +26,17 @@ class ActNorm(nn.Module):
             flatten = input.permute(1, 0, 2, 3).contiguous().view(input.shape[1], -1)
             mean = (
                 flatten.mean(1)
-                    .unsqueeze(1)
-                    .unsqueeze(2)
-                    .unsqueeze(3)
-                    .permute(1, 0, 2, 3)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .unsqueeze(3)
+                .permute(1, 0, 2, 3)
             )
             std = (
                 flatten.std(1)
-                    .unsqueeze(1)
-                    .unsqueeze(2)
-                    .unsqueeze(3)
-                    .permute(1, 0, 2, 3)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .unsqueeze(3)
+                .permute(1, 0, 2, 3)
             )
 
             self.loc.data.copy_(-mean)
@@ -77,8 +77,7 @@ class InvConv2d(nn.Module):
 
         out = F.conv2d(input, self.weight)
         logdet = (
-                height * width * torch.slogdet(self.weight.squeeze().double())[
-            1].float()
+            height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
         )
 
         return out, logdet
@@ -127,10 +126,9 @@ class InvConv2dLU(nn.Module):
 
     def calc_weight(self):
         weight = (
-                self.w_p
-                @ (self.w_l * self.l_mask + self.l_eye)
-                @ ((self.w_u * self.u_mask) + torch.diag(
-            self.s_sign * torch.exp(self.w_s)))
+            self.w_p
+            @ (self.w_l * self.l_mask + self.l_eye)
+            @ ((self.w_u * self.u_mask) + torch.diag(self.s_sign * torch.exp(self.w_s)))
         )
 
         return weight.unsqueeze(2).unsqueeze(3)

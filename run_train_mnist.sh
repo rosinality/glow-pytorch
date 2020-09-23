@@ -1,5 +1,4 @@
-for d in 0.005 0.01257 0.03162 0.07953 0.2
+for d in `cat ./parameters/mnist.deltas`
 do
-    python train_mnist.py --batch 128 --img_size 32 --iter 30000 --lr=0.0003 --delta=$d ./mnist/training/
+    python train.py --delta="$d" `cat ./parameters/mnist.params`
 done
-

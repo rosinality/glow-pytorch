@@ -27,6 +27,13 @@ def net_args(parser):
     )
     parser.add_argument("--n_sample", default=20, type=int, help="number of samples")
     parser.add_argument(
+        "--dataset",
+        default="mnist",
+        type=str,
+        choices=["mnist", "fashion_mnist"],
+        help="name of the dataset",
+    )
+    parser.add_argument(
         "--delta",
         default=0.01,
         type=float,

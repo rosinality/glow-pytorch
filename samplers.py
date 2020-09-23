@@ -63,3 +63,38 @@ def memory_mnist(batch_size, image_size, n_channels):
             )
             loader = iter(train_loader)
             yield next(loader)
+
+
+def memory_fashion(batch_size, image_size, n_channels):
+    transform = transforms.Compose(
+        [
+            transforms.Resize(image_size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,) * n_channels, (1,) * n_channels),
+        ]
+    )
+    train_loader = torch.utils.data.DataLoader(
+        torchvision.datasets.FashionMNIST(
+            "~/users/pt/files/", train=True, download=True, transform=transform
+        ),
+        batch_size=batch_size,
+        shuffle=True,
+    )
+
+    loader = iter(train_loader)
+
+    while True:
+        try:
+            yield next(loader)
+
+        except StopIteration:
+            train_loader = torch.utils.data.DataLoader(
+                torchvision.datasets.MNIST(
+                    "~/users/pt/files/", train=True, download=True, transform=transform
+                ),
+                batch_size=batch_size,
+                shuffle=True,
+            )
+            loader = iter(train_loader)
+            yield next(loader)
