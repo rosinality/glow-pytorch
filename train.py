@@ -1,4 +1,5 @@
 import argparse
+from argparse import Namespace
 
 import torch
 from torch import optim
@@ -7,7 +8,7 @@ from tqdm import tqdm
 
 from model import Glow
 from samplers import memory_mnist, memory_fashion
-from utils import net_args, calc_z_shapes, calc_loss
+from utils import net_args, calc_z_shapes, calc_loss, string_args
 
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
 
@@ -17,9 +18,8 @@ def train(args, model, optimizer):
         dataset_f = memory_mnist
     elif args.dataset == "fashion_mnist":
         dataset_f = memory_fashion
-    else:
-        raise ValueError(f"Unknown dataset {args.dataset}!")
     dataset = iter(dataset_f(args.batch, args.img_size, args.n_channels))
+    repr_args = string_args(args)
     n_bins = 2.0 ** args.n_bits
 
     z_sample = []
@@ -65,14 +65,14 @@ def train(args, model, optimizer):
                 with torch.no_grad():
                     utils.save_image(
                         model.reverse(z_sample).cpu().data,
-                        f"sample/{str(args.delta)}_{str(i + 1).zfill(6)}.png",
+                        f"sample/sample_{repr_args}_{str(i + 1).zfill(6)}.png",
                         normalize=True,
                         nrow=10,
                         range=(-0.5, 0.5),
                     )
-    torch.save(model.state_dict(), f"checkpoint/model_{str(args.delta)}_.pt")
+    torch.save(model.state_dict(), f"checkpoint/model_{repr_args}_.pt")
 
-    f = open(f"ll/ll_{str(args.delta)}_.txt", "w")
+    f = open(f"ll/ll_{repr_args}_.txt", "w")
     for i in range(100):
         with torch.no_grad():
             image, _ = next(dataset)
@@ -84,14 +84,14 @@ def train(args, model, optimizer):
             )
             print(args.delta, log_p.item(), log_det.item(), file=f)
     f.close()
-    f = open(f"ll/losses_{str(args.delta)}_.txt", "w")
+    f = open(f"losses/losses_{repr_args}_txt", "w")
     print("\n".join(map(str, losses)), file=f)
     f.close()
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    print(args)
+    print(string_args(args))
     device = args.device
 
     model_single = Glow(

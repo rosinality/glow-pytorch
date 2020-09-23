@@ -4,7 +4,7 @@ import torch
 
 from model import Glow
 from samplers import memory_mnist, memory_fashion
-from utils import net_args, calc_loss
+from utils import net_args, calc_loss, string_args
 
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
 parser.add_argument("model_path", type=str, help="path to model weights")
@@ -15,13 +15,11 @@ def test(args, model):
         dataset_f = memory_mnist
     elif args.dataset == "fashion_mnist":
         dataset_f = memory_fashion
-    else:
-        raise ValueError(f"Unknown dataset {args.dataset}!")
     dataset = iter(dataset_f(args.batch, args.img_size, args.n_channels))
-
+    repr_args = string_args(args)
     model.eval()
     n_bins = 2.0 ** args.n_bits
-    f = open(f"./test/ll_{str(args.delta)}_.txt", "w")
+    f = open(f"./test/ll_class_{repr_args}_.txt", "w")
     for i in range(100):
         with torch.no_grad():
             image_original, y = next(dataset)
@@ -40,7 +38,7 @@ def test(args, model):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    print(args)
+    print(string_args(args))
     device = args.device
 
     model_single = Glow(
