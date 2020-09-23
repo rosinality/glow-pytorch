@@ -34,6 +34,13 @@ def net_args(parser):
         help="name of the dataset",
     )
     parser.add_argument(
+        "--device",
+        default="cpu",
+        type=str,
+        choices=["cuda:0", "cuda:1"],
+        help="device used to run the neural network",
+    )
+    parser.add_argument(
         "--delta",
         default=0.01,
         type=float,

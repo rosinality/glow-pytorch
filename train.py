@@ -9,10 +9,7 @@ from model import Glow
 from samplers import memory_mnist, memory_fashion
 from utils import net_args, calc_z_shapes, calc_loss
 
-device = "cuda:0"
-
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
-# parser.add_argument("path", metavar="PATH", type=str, help="Path to image directory")
 
 
 def train(args, model, optimizer):
@@ -20,6 +17,8 @@ def train(args, model, optimizer):
         dataset_f = memory_mnist
     elif args.dataset == "fashion_mnist":
         dataset_f = memory_fashion
+    else:
+        raise ValueError(f"Unknown dataset {args.dataset}!")
     dataset = iter(dataset_f(args.batch, args.img_size, args.n_channels))
     n_bins = 2.0 ** args.n_bits
 
@@ -93,6 +92,7 @@ def train(args, model, optimizer):
 if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
+    device = args.device
 
     model_single = Glow(
         args.n_channels,
