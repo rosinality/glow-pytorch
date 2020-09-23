@@ -1,1 +1,1 @@
---batch 128 --img_size 32 --iter 100000 --lr=0.0002  --device cuda:1 --n_channels 1 --dataset fashion_mnist
+--batch 128 --img_size 32 --iter 30000 --lr=0.0002  --device cuda:1 --n_channels 1 --dataset fashion_mnist
