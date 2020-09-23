@@ -41,7 +41,7 @@ def memory_mnist(batch_size, image_size, n_channels):
     )
     train_loader = torch.utils.data.DataLoader(
         torchvision.datasets.MNIST(
-            "~/users/pt/files/", train=True, download=True, transform=transform
+            "~/datasets/mnist/", train=True, download=True, transform=transform
         ),
         batch_size=batch_size,
         shuffle=True,
@@ -56,7 +56,7 @@ def memory_mnist(batch_size, image_size, n_channels):
         except StopIteration:
             train_loader = torch.utils.data.DataLoader(
                 torchvision.datasets.MNIST(
-                    "~/users/pt/files/", train=True, download=True, transform=transform
+                    "~/datasets/mnist/", train=True, download=True, transform=transform
                 ),
                 batch_size=batch_size,
                 shuffle=True,
@@ -76,7 +76,7 @@ def memory_fashion(batch_size, image_size, n_channels):
     )
     train_loader = torch.utils.data.DataLoader(
         torchvision.datasets.FashionMNIST(
-            "~/users/pt/files/", train=True, download=True, transform=transform
+            "~/datasets/fashion_mnist/", train=True, download=True, transform=transform
         ),
         batch_size=batch_size,
         shuffle=True,
@@ -90,8 +90,9 @@ def memory_fashion(batch_size, image_size, n_channels):
 
         except StopIteration:
             train_loader = torch.utils.data.DataLoader(
-                torchvision.datasets.MNIST(
-                    "~/users/pt/files/", train=True, download=True, transform=transform
+                torchvision.datasets.FashionMNIST(
+                    "~/datasets/fashion_mnist/", train=True, download=True,
+                    transform=transform
                 ),
                 batch_size=batch_size,
                 shuffle=True,
