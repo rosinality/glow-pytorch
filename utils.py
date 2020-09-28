@@ -6,7 +6,7 @@ def net_args(parser):
     parser.add_argument(
         "--n_channels", default=1, type=int, help="number of image channels"
     )
-    parser.add_argument("--iter", default=200000, type=int, help="maximum iterations")
+    parser.add_argument("--epochs", default=200000, type=int, help="maximum epochs")
     parser.add_argument(
         "--n_flow", default=32, type=int, help="number of flows in each block"
     )
