@@ -1,1 +1,1 @@
---batch 16 --img_size 32 --epochs 5 --lr=0.0002 --device cuda:0 --n_channels 1 --dataset mnist
+--batch 128 --img_size 32 --epochs 200 --lr=0.0002 --device cuda:0 --n_channels 1 --dataset mnist
