@@ -74,7 +74,7 @@ def train(args, model, optimizer):
                 f"Loss: {np.mean(losses):.5f}; logP: {np.mean(logps):.5f}; logdet: {np.mean(logdets):.5f}"
             )
             epoch_losses.append(np.mean(losses))
-            if len(epoch_losses) >= 3 and epoch_losses[-3] < epoch_losses[-1]:
+            if len(epoch_losses) >= 4 and epoch_losses[-4] < epoch_losses[-1]:
                 break
 
     torch.save(model.state_dict(), f"checkpoint/model_{repr_args}_.pt")
