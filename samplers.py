@@ -91,8 +91,10 @@ def memory_fashion(batch_size, image_size, n_channels):
         except StopIteration:
             train_loader = torch.utils.data.DataLoader(
                 torchvision.datasets.FashionMNIST(
-                    "~/datasets/fashion_mnist/", train=True, download=True,
-                    transform=transform
+                    "~/datasets/fashion_mnist/",
+                    train=True,
+                    download=True,
+                    transform=transform,
                 ),
                 batch_size=batch_size,
                 shuffle=True,

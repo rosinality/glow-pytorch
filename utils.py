@@ -76,5 +76,6 @@ def calc_loss(log_p, logdet, image_size, n_bins, n_dim):
         (logdet / (log(2) * n_pixel)).mean(),
     )
 
+
 def string_args(args):
     return ";".join([f"{k}#{v}" for k, v in args.__dict__.items()])

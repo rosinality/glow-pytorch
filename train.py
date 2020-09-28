@@ -1,5 +1,4 @@
 import argparse
-from argparse import Namespace
 
 import torch
 from torch import optim
@@ -84,7 +83,7 @@ def train(args, model, optimizer):
             )
             print(args.delta, log_p.item(), log_det.item(), file=f)
     f.close()
-    f = open(f"losses/losses_{repr_args}_txt", "w")
+    f = open(f"losses/losses_{repr_args}_.txt", "w")
     print("\n".join(map(str, losses)), file=f)
     f.close()
 
