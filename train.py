@@ -36,16 +36,14 @@ def train(args, model, optimizer):
                 args.batch, args.img_size, args.n_channels
             )
             for image in train_loader:
+                optimizer.zero_grad()
                 image = image.to(device)
                 log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
                 logdet = logdet.mean()
                 loss, log_p, log_det = calc_loss(
                     log_p, logdet, args.img_size, n_bins, args.n_channels
                 )
-                optimizer.zero_grad()
                 loss.backward()
-                warmup_lr = args.lr
-                optimizer.param_groups[0]["lr"] = warmup_lr
                 optimizer.step()
             with torch.no_grad():
                 utils.save_image(
@@ -59,18 +57,17 @@ def train(args, model, optimizer):
             logdets = []
             logps = []
             for image in val_loader:
-                with torch.no_grad():
-                    image = image.to(device)
-                    log_p, logdet, _ = model(
-                        image + torch.randn_like(image) * args.delta
-                    )
-                    logdet = logdet.mean()
-                    loss, log_p, log_det = calc_loss(
-                        log_p, logdet, args.img_size, n_bins, args.n_channels
-                    )
-                    losses.append(loss.item())
-                    logdets.append(log_det.item())
-                    logps.append(log_p.item())
+                image = image.to(device)
+                log_p, logdet, _ = model(
+                    image + torch.randn_like(image) * args.delta
+                )
+                logdet = logdet.mean()
+                loss, log_p, log_det = calc_loss(
+                    log_p, logdet, args.img_size, n_bins, args.n_channels
+                )
+                losses.append(loss.item())
+                logdets.append(log_det.item())
+                logps.append(log_p.item())
             pbar.set_description(
                 f"Loss: {np.mean(losses):.5f}; logP: {np.mean(logps):.5f}; logdet: {np.mean(logdets):.5f}"
             )
@@ -79,22 +76,21 @@ def train(args, model, optimizer):
             if current_loss <= min_loss:
                 min_loss = current_loss
                 torch.save(model.state_dict(), f"checkpoint/model_{repr_args}_.pt")
-            if len(epoch_losses) >= 10 and min(epoch_losses[-10:]) > min_loss:
+            if len(epoch_losses) >= 5 and min(epoch_losses[-5:]) > min_loss:
                 break
 
     f = open(f"ll/ll_{repr_args}_.txt", "w")
     _, val_loader = dataset_f(args.batch, args.img_size, args.n_channels)
     for image in val_loader:
-        with torch.no_grad():
-            image = image.to(device)
-            log_p, logdet, _ = model(
-                image + torch.randn_like(image) * args.delta
-            )
-            logdet = logdet.mean()
-            loss, log_p, log_det = calc_loss(
-                log_p, logdet, args.img_size, n_bins, args.n_channels
-            )
-            print(args.delta, log_p.item(), log_det.item(), file=f)
+        image = image.to(device)
+        log_p, logdet, _ = model(
+            image + torch.randn_like(image) * args.delta
+        )
+        logdet = logdet.mean()
+        loss, log_p, log_det = calc_loss(
+            log_p, logdet, args.img_size, n_bins, args.n_channels
+        )
+        print(args.delta, log_p.item(), log_det.item(), file=f)
     f.close()
 
     f = open(f"losses/losses_{repr_args}_.txt", "w")
