@@ -29,6 +29,7 @@ def train(args, model, optimizer):
         z_sample.append(z_new.to(device))
 
     epoch_losses = []
+    min_loss = 1e12
     with tqdm(range(args.epochs)) as pbar:
         for i in pbar:
             train_loader, val_loader = dataset_f(
@@ -73,11 +74,13 @@ def train(args, model, optimizer):
             pbar.set_description(
                 f"Loss: {np.mean(losses):.5f}; logP: {np.mean(logps):.5f}; logdet: {np.mean(logdets):.5f}"
             )
-            epoch_losses.append(np.mean(losses))
-            if len(epoch_losses) >= 11 and epoch_losses[-11] < epoch_losses[-1]:
+            current_loss = np.mean(losses)
+            epoch_losses.append(current_loss)
+            if current_loss <= min_loss:
+                min_loss = current_loss
+                torch.save(model.state_dict(), f"checkpoint/model_{repr_args}_.pt")
+            if len(epoch_losses) >= 10 and min(epoch_losses[-10:]) > min_loss:
                 break
-
-    torch.save(model.state_dict(), f"checkpoint/model_{repr_args}_.pt")
 
     f = open(f"ll/ll_{repr_args}_.txt", "w")
     _, val_loader = dataset_f(args.batch, args.img_size, args.n_channels)
