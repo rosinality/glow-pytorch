@@ -64,7 +64,7 @@ def memory_mnist(batch_size, image_size, n_channels):
         "~/datasets/mnist/", train=True, download=True, transform=transform
     )
 
-    train_data = CustomTensorDataset(data.data[:55000].clone(), transform=transform)
+    train_data = CustomTensorDataset(data.data[50000:55000].clone(), transform=transform)
     val_data = CustomTensorDataset(data.data[55000:].clone(), transform=transform)
     train_loader = torch.utils.data.DataLoader(
         train_data,
@@ -94,7 +94,7 @@ def memory_fashion(batch_size, image_size, n_channels):
         "~/datasets/fashion_mnist/", train=True, download=True, transform=transform
     )
 
-    train_data = CustomTensorDataset(data.data[:55000].clone(), transform=transform)
+    train_data = CustomTensorDataset(data.data[50000:55000].clone(), transform=transform)
     val_data = CustomTensorDataset(data.data[55000:].clone(), transform=transform)
     train_loader = torch.utils.data.DataLoader(
         train_data,
