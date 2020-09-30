@@ -30,7 +30,7 @@ def net_args(parser):
         "--dataset",
         default="mnist",
         type=str,
-        choices=["mnist", "fashion_mnist"],
+        choices=["mnist", "fashion_mnist", "point_2d"],
         help="name of the dataset",
     )
     parser.add_argument(
