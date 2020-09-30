@@ -1,1 +1,1 @@
---batch 64 --img_size 32 --epochs 2 --lr=0.0002 --device cuda:1 --n_channels 1 --dataset fashion_mnist --affine
+--batch 64 --img_size 32 --epochs 200 --lr=0.0002 --device cuda:1 --n_channels 1 --dataset fashion_mnist --affine
