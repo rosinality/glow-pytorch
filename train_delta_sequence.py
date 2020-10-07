@@ -36,10 +36,12 @@ def train(args, model, optimizer):
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
 
+    deltas = create_deltas_sequence(0.02, 0.001)
+    args.delta = deltas[0]
+
     epoch_losses = []
     f_train_loss = open(f"losses/losses_train_{repr_args}_.txt", "w", buffering=1)
     f_test_loss = open(f"losses/losses_test_{repr_args}_.txt", "w", buffering=1)
-    deltas = create_deltas_sequence(0.02, 0.001)
 
     with tqdm(range(200)) as pbar:
         for i in pbar:
