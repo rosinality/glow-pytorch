@@ -1,1 +1,1 @@
---batch 64 --img_size 8 --n_block 3 --epochs 200 --lr=0.0001 --device cuda:0 --n_channels 1 --dataset point_2d  --affine
+--batch 64 --img_size 8 --n_block 3 --epochs 200 --lr=0.001 --device cuda:0 --n_channels 1 --affine --n_bits 8 --dataset point_2d

@@ -103,17 +103,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(string_args(args))
     device = args.device
-
-    model_single = Glow(
+    model = Glow(
         args.n_channels,
         args.n_flow,
         args.n_block,
         affine=args.affine,
         conv_lu=not args.no_lu,
     )
-    model = model_single
     model = model.to(device)
-
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-
     train(args, model, optimizer)
