@@ -8,8 +8,8 @@ from torchvision import transforms, datasets
 
 
 class CustomTensorDataset(Dataset):
-    """TensorDataset with support of transforms.
-    """
+    """TensorDataset with support of transforms."""
+
     def __init__(self, tensors, transform=None):
         self.tensors = tensors
         self.transform = transform
@@ -26,13 +26,12 @@ class CustomTensorDataset(Dataset):
         return self.tensors.size(0)
 
 
-
-def generate_2D_point_image(N, noise=1.0):
+def generate_2D_point_image(N, noise=1.0, seed=7):
     image = torch.zeros((8, 8))
-    image[4, 4] = 1.
+    image[4, 4] = 1.0
     image = gaussian_filter(image, 0.5)
-    np.random.seed(1)
-    return torch.stack(
+    np.random.seed(seed)
+    dataset = torch.stack(
         [
             torch.FloatTensor(
                 shift(image, noise * np.random.normal(size=2) - np.array([0.5, 0.5]))
@@ -40,8 +39,7 @@ def generate_2D_point_image(N, noise=1.0):
             for _ in range(N)
         ]
     )
-
-
+    return dataset
 
 def sample_data(path, batch_size, image_size, n_channels):
     transform = transforms.Compose(
@@ -98,7 +96,6 @@ def memory_mnist(batch_size, image_size, n_channels):
     return train_loader, val_loader
 
 
-
 def memory_fashion(batch_size, image_size, n_channels):
     transform = transforms.Compose(
         [
@@ -138,10 +135,12 @@ def point_2d(batch_size, image_size, n_channels):
             transforms.Normalize((0.5,) * n_channels, (1,) * n_channels),
         ]
     )
-    data = generate_2D_point_image(100000)
+    N = 5000
+    split = int(0.9 * N)
+    data = generate_2D_point_image(N)
 
-    train_data = CustomTensorDataset(data.data[:90000].clone(), transform=transform)
-    val_data = CustomTensorDataset(data.data[90000:].clone(), transform=transform)
+    train_data = CustomTensorDataset(data.data[:split].clone(), transform=transform)
+    val_data = CustomTensorDataset(data.data[split:].clone(), transform=transform)
     train_loader = torch.utils.data.DataLoader(
         train_data,
         batch_size=batch_size,

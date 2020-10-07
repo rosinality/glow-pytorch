@@ -1,4 +1,5 @@
 from math import log
+import numpy as np
 
 
 def net_args(parser):
@@ -79,3 +80,17 @@ def calc_loss(log_p, logdet, image_size, n_bins, n_dim):
 
 def string_args(args):
     return ";".join([f"{k}#{v}" for k, v in args.__dict__.items()])
+
+
+def expspace(start: float, end: float, n_steps: int):
+    space = np.linspace(np.log(start), np.log(end), n_steps)
+    space = np.exp(space)
+    return space
+
+
+def create_deltas_sequence(start: float, stop: float):
+    deltas = [start] * 50
+    steps = expspace(start, stop, 16)
+    for s in steps[1:]:
+        deltas += [s] * 10
+    return deltas

@@ -35,6 +35,7 @@ def train(args, model, optimizer):
     f_loss = open(f"losses/losses_{repr_args}_.txt", "w", buffering=1)
     with tqdm(range(args.epochs)) as pbar:
         for i in pbar:
+            args.delta = 1000
             train_loader, val_loader = dataset_f(
                 args.batch, args.img_size, args.n_channels
             )
@@ -61,9 +62,7 @@ def train(args, model, optimizer):
             logps = []
             for image in val_loader:
                 image = image.to(device)
-                log_p, logdet, _ = model(
-                    image + torch.randn_like(image) * args.delta
-                )
+                log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
                 logdet = logdet.mean()
                 loss, log_p, log_det = calc_loss(
                     log_p, logdet, args.img_size, n_bins, args.n_channels
@@ -87,9 +86,7 @@ def train(args, model, optimizer):
     _, val_loader = dataset_f(args.batch, args.img_size, args.n_channels)
     for image in val_loader:
         image = image.to(device)
-        log_p, logdet, _ = model(
-            image + torch.randn_like(image) * args.delta
-        )
+        log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
         logdet = logdet.mean()
         loss, log_p, log_det = calc_loss(
             log_p, logdet, args.img_size, n_bins, args.n_channels
