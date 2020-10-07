@@ -15,7 +15,7 @@ class ActNorm(nn.Module):
         self.loc = nn.Parameter(torch.zeros(1, in_channel, 1, 1))
         self.scale = nn.Parameter(torch.ones(1, in_channel, 1, 1))
 
-        self.register_buffer('initialized', torch.tensor(0, dtype=torch.uint8))
+        self.register_buffer("initialized", torch.tensor(0, dtype=torch.uint8))
         self.logdet = logdet
 
     def initialize(self, input):
@@ -102,11 +102,11 @@ class InvConv2dLU(nn.Module):
         w_s = torch.from_numpy(w_s)
         w_u = torch.from_numpy(w_u)
 
-        self.register_buffer('w_p', w_p)
-        self.register_buffer('u_mask', torch.from_numpy(u_mask))
-        self.register_buffer('l_mask', torch.from_numpy(l_mask))
-        self.register_buffer('s_sign', torch.sign(w_s))
-        self.register_buffer('l_eye', torch.eye(l_mask.shape[0]))
+        self.register_buffer("w_p", w_p)
+        self.register_buffer("u_mask", torch.from_numpy(u_mask))
+        self.register_buffer("l_mask", torch.from_numpy(l_mask))
+        self.register_buffer("s_sign", torch.sign(w_s))
+        self.register_buffer("l_eye", torch.eye(l_mask.shape[0]))
         self.w_l = nn.Parameter(w_l)
         self.w_s = nn.Parameter(logabs(w_s))
         self.w_u = nn.Parameter(w_u)
@@ -333,7 +333,9 @@ class Block(nn.Module):
 
 
 class Glow(nn.Module):
-    def __init__(self, in_channel, n_flow, n_block, affine=True, conv_lu=True):
+    def __init__(
+        self, in_channel, n_flow, n_block, affine=True, conv_lu=True
+    ):
         super().__init__()
 
         self.blocks = nn.ModuleList()
