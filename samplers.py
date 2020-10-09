@@ -41,6 +41,7 @@ def generate_2D_point_image(N, noise=1.0, seed=7):
     )
     return dataset
 
+
 def sample_data(path, batch_size, image_size, n_channels):
     transform = transforms.Compose(
         [
