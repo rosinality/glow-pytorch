@@ -83,9 +83,17 @@ def memory_mnist(batch_size, image_size, n_channels):
     )
 
     train_data = CustomTensorDataset(data.data[:55000].clone(), transform=transform)
+    train_val_data = CustomTensorDataset(
+        data.data[50000:55000].clone(), transform=transform
+    )
     val_data = CustomTensorDataset(data.data[55000:].clone(), transform=transform)
     train_loader = torch.utils.data.DataLoader(
         train_data,
+        batch_size=batch_size,
+        shuffle=True,
+    )
+    train_val_loader = torch.utils.data.DataLoader(
+        train_val_data,
         batch_size=batch_size,
         shuffle=True,
     )
@@ -94,7 +102,7 @@ def memory_mnist(batch_size, image_size, n_channels):
         batch_size=batch_size,
         shuffle=False,
     )
-    return train_loader, val_loader
+    return train_loader, val_loader, train_val_loader
 
 
 def memory_fashion(batch_size, image_size, n_channels):
@@ -112,9 +120,17 @@ def memory_fashion(batch_size, image_size, n_channels):
     )
 
     train_data = CustomTensorDataset(data.data[:55000].clone(), transform=transform)
+    train_val_data = CustomTensorDataset(
+        data.data[50000:55000].clone(), transform=transform
+    )
     val_data = CustomTensorDataset(data.data[55000:].clone(), transform=transform)
     train_loader = torch.utils.data.DataLoader(
         train_data,
+        batch_size=batch_size,
+        shuffle=True,
+    )
+    train_val_loader = torch.utils.data.DataLoader(
+        train_val_data,
         batch_size=batch_size,
         shuffle=True,
     )
@@ -123,7 +139,7 @@ def memory_fashion(batch_size, image_size, n_channels):
         batch_size=batch_size,
         shuffle=False,
     )
-    return train_loader, val_loader
+    return train_loader, val_loader, train_val_loader
 
 
 def point_2d(batch_size, image_size, n_channels):
@@ -141,9 +157,17 @@ def point_2d(batch_size, image_size, n_channels):
     data = generate_2D_point_image(N)
 
     train_data = CustomTensorDataset(data.data[:split].clone(), transform=transform)
+    train_val_data = CustomTensorDataset(
+        data.data[(N - 2 * split) : split].clone(), transform=transform
+    )
     val_data = CustomTensorDataset(data.data[split:].clone(), transform=transform)
     train_loader = torch.utils.data.DataLoader(
         train_data,
+        batch_size=batch_size,
+        shuffle=True,
+    )
+    train_val_loader = torch.utils.data.DataLoader(
+        train_val_data,
         batch_size=batch_size,
         shuffle=True,
     )
@@ -152,4 +176,4 @@ def point_2d(batch_size, image_size, n_channels):
         batch_size=batch_size,
         shuffle=False,
     )
-    return train_loader, val_loader
+    return train_loader, val_loader, train_val_loader

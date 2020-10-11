@@ -47,7 +47,7 @@ def train(args, model, optimizer):
         for i in pbar:
             args.delta = deltas[i]
             repr_args = string_args(args)
-            train_loader, val_loader = dataset_f(
+            train_loader, val_loader, train_val_loader = dataset_f(
                 args.batch, args.img_size, args.n_channels
             )
             train_losses = []
@@ -99,17 +99,28 @@ def train(args, model, optimizer):
                     )
 
                 f_ll = open(f"ll/ll_{repr_args}_{i + 1}.txt", "w")
-                _, val_loader = dataset_f(args.batch, args.img_size, args.n_channels)
-                for image in val_loader:
+                train_loader, val_loader, train_val_loader = dataset_f(
+                    args.batch, args.img_size, args.n_channels
+                )
+                train_val_loader = iter(train_val_loader)
+                for image_val in val_loader:
+                    image = image_val
                     image = image.to(device)
-                    log_p, logdet, _ = model(
+                    log_p_val, logdet_val, _ = model(
                         image + torch.randn_like(image) * args.delta
                     )
-                    for lp, ld in zip(log_p, logdet):
+                    image = next(train_val_loader)
+                    image = image.to(device)
+                    log_p_train_val, logdet_train_val, _ = model(
+                        image + torch.randn_like(image) * args.delta
+                    )
+                    for lpv, ldv, lptv, ldtv, in zip(log_p_val, logdet_val, log_p_train_val, logdet_train_val):
                         print(
                             args.delta,
-                            lp.item(),
-                            ld.item(),
+                            lpv.item(),
+                            ldv.item(),
+                            lptv.item(),
+                            ldtv.item(),
                             file=f_ll,
                         )
                 f_ll.close()
