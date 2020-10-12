@@ -15,24 +15,18 @@ def test(args, model):
         dataset_f = memory_mnist
     elif args.dataset == "fashion_mnist":
         dataset_f = memory_fashion
-    dataset = iter(dataset_f(args.batch, args.img_size, args.n_channels))
     repr_args = string_args(args)
-    model.eval()
-    n_bins = 2.0 ** args.n_bits
-    f = open(f"./test/ll_class_{repr_args}_.txt", "w")
-    for i in range(100):
-        with torch.no_grad():
-            image_original, y = next(dataset)
-            for cls in range(10):
-                image = image_original[y == cls]
-                print(image.shape)
-                image = image.to(device)
-                log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
-                logdet = logdet.mean()
-                loss, log_p, log_det = calc_loss(
-                    log_p, logdet, args.img_size, n_bins, args.n_channels
-                )
-                print(args.delta, log_p.item(), log_det.item(), cls, file=f)
+    f = open(f"./test/ll_per_point_{repr_args}_.txt", "w")
+    train_loader, val_loader, train_val_loader, train_labels, val_labels = dataset_f(
+        1, args.img_size, args.n_channels, return_y=True
+    )
+    for image in train_loader:
+        print(image.shape)
+        1/0
+        image = image.to(device)
+        log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
+
+    # print(args.delta, log_p.item(), log_det.item(), cls, file=f)
     f.close()
 
 
