@@ -4,7 +4,7 @@ import torch
 
 from model import Glow
 from samplers import memory_mnist, memory_fashion
-from utils import net_args, calc_loss, string_args
+from utils import net_args, string_args
 
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
 parser.add_argument("model_path", type=str, help="path to model weights")
@@ -16,6 +16,7 @@ def test(args, model):
     elif args.dataset == "fashion_mnist":
         dataset_f = memory_fashion
     repr_args = string_args(args)
+    print(repr_args)
     f = open(f"./test/ll_per_point_{repr_args}_.txt", "w")
     train_loader, val_loader, train_val_loader, train_labels, val_labels = dataset_f(
         1, args.img_size, args.n_channels, return_y=True
