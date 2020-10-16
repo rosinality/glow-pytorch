@@ -90,12 +90,12 @@ def memory_mnist(batch_size, image_size, n_channels, return_y=False):
     train_loader = torch.utils.data.DataLoader(
         train_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
     )
     train_val_loader = torch.utils.data.DataLoader(
         train_val_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
     )
     val_loader = torch.utils.data.DataLoader(
         val_data,
@@ -136,12 +136,12 @@ def memory_fashion(batch_size, image_size, n_channels):
     train_loader = torch.utils.data.DataLoader(
         train_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
     )
     train_val_loader = torch.utils.data.DataLoader(
         train_val_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
     )
     val_loader = torch.utils.data.DataLoader(
         val_data,
@@ -173,12 +173,12 @@ def point_2d(batch_size, image_size, n_channels):
     train_loader = torch.utils.data.DataLoader(
         train_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
     )
     train_val_loader = torch.utils.data.DataLoader(
         train_val_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
     )
     val_loader = torch.utils.data.DataLoader(
         val_data,
