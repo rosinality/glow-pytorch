@@ -79,7 +79,7 @@ def calc_loss(log_p, logdet, image_size, n_bins, n_dim):
 
 
 def string_args(args):
-    return ";".join([f"{k}#{v}" for k, v in args.__dict__.items()])
+    return ";".join([f"{k}#{v}" for k, v in args.__dict__.items() if "model_path" not in k])
 
 
 def expspace(start: float, end: float, n_steps: int):

@@ -15,19 +15,24 @@ def test(args, model):
         dataset_f = memory_mnist
     elif args.dataset == "fashion_mnist":
         dataset_f = memory_fashion
+    args.delta = float(args.model_path.split(";")[-1].split("_")[0].split("#")[1])
     repr_args = string_args(args)
-    print(repr_args)
     f = open(f"./test/ll_per_point_{repr_args}_.txt", "w")
     train_loader, val_loader, train_val_loader, train_labels, val_labels = dataset_f(
         1, args.img_size, args.n_channels, return_y=True
     )
-    for image in train_loader:
-        print(image.shape)
-        1/0
-        image = image.to(device)
-        log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
-
-    # print(args.delta, log_p.item(), log_det.item(), cls, file=f)
+    with torch.no_grad():
+        for ind, image in enumerate(train_loader):
+            image = image.repeat(200, 1, 1, 1)
+            image = image.to(device)
+            image = image + torch.randn_like(image) * args.delta
+    #         print(image)
+            print(ind, end=",")
+            log_p, log_det, _ = model(image)
+            for i in range(log_p.shape[0]):
+                print(ind, args.delta, log_p[i].item(), log_det[i].item(), train_labels[ind].item(), file=f)
+            if ind >= 9999:
+                break
     f.close()
 
 
