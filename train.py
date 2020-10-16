@@ -8,7 +8,13 @@ from tqdm import tqdm
 
 from model import Glow
 from samplers import memory_mnist, memory_fashion, point_2d
-from utils import net_args, calc_z_shapes, calc_loss, string_args
+from utils import (
+    net_args,
+    calc_z_shapes,
+    calc_loss,
+    string_args,
+    create_deltas_sequence,
+)
 
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
 
@@ -31,14 +37,16 @@ def train(args, model, optimizer):
         z_sample.append(z_new.to(device))
 
     epoch_losses = []
-    min_loss = 1e12
-    f_loss = open(f"losses/losses_{repr_args}_.txt", "w", buffering=1)
+    f_train_loss = open(f"losses/losses_train_{repr_args}_.txt", "w", buffering=1)
+    f_test_loss = open(f"losses/losses_test_{repr_args}_.txt", "w", buffering=1)
+
     with tqdm(range(args.epochs)) as pbar:
         for i in pbar:
-            args.delta = 1000
-            train_loader, val_loader = dataset_f(
+            repr_args = string_args(args)
+            train_loader, val_loader, train_val_loader = dataset_f(
                 args.batch, args.img_size, args.n_channels
             )
+            train_losses = []
             for image in train_loader:
                 optimizer.zero_grad()
                 image = image.to(device)
@@ -49,6 +57,9 @@ def train(args, model, optimizer):
                 )
                 loss.backward()
                 optimizer.step()
+                train_losses.append(loss.item())
+            current_train_loss = np.mean(train_losses)
+            print(f"{current_train_loss},{args.delta},{i + 1}", file=f_train_loss)
             with torch.no_grad():
                 utils.save_image(
                     model.reverse(z_sample).cpu().data,
@@ -57,43 +68,65 @@ def train(args, model, optimizer):
                     nrow=10,
                     range=(-0.5, 0.5),
                 )
-            losses = []
-            logdets = []
-            logps = []
-            for image in val_loader:
-                image = image.to(device)
-                log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
-                logdet = logdet.mean()
-                loss, log_p, log_det = calc_loss(
-                    log_p, logdet, args.img_size, n_bins, args.n_channels
+                losses = []
+                logdets = []
+                logps = []
+                for image in val_loader:
+                    image = image.to(device)
+                    log_p, logdet, _ = model(
+                        image + torch.randn_like(image) * args.delta
+                    )
+                    logdet = logdet.mean()
+                    loss, log_p, log_det = calc_loss(
+                        log_p, logdet, args.img_size, n_bins, args.n_channels
+                    )
+                    losses.append(loss.item())
+                    logdets.append(log_det.item())
+                    logps.append(log_p.item())
+                pbar.set_description(
+                    f"Loss: {np.mean(losses):.5f}; logP: {np.mean(logps):.5f}; logdet: {np.mean(logdets):.5f}; delta: {args.delta:.5f}"
                 )
-                losses.append(loss.item())
-                logdets.append(log_det.item())
-                logps.append(log_p.item())
-            pbar.set_description(
-                f"Loss: {np.mean(losses):.5f}; logP: {np.mean(logps):.5f}; logdet: {np.mean(logdets):.5f}"
-            )
-            current_loss = np.mean(losses)
-            print(current_loss, file=f_loss)
-            epoch_losses.append(current_loss)
-            if current_loss <= min_loss:
-                min_loss = current_loss
-                torch.save(model.state_dict(), f"checkpoint/model_{repr_args}_.pt")
-            if len(epoch_losses) >= 10 and min(epoch_losses[-10:]) > min_loss:
-                break
+                current_loss = np.mean(losses)
+                print(f"{current_loss},{args.delta},{i + 1}", file=f_test_loss)
+                epoch_losses.append(current_loss)
+                if (i + 1) % 10 == 0:
+                    torch.save(
+                        model.state_dict(), f"checkpoint/model_{repr_args}_{i + 1}_.pt"
+                    )
 
-    f_ll = open(f"ll/ll_{repr_args}_.txt", "w")
-    _, val_loader = dataset_f(args.batch, args.img_size, args.n_channels)
-    for image in val_loader:
-        image = image.to(device)
-        log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
-        logdet = logdet.mean()
-        loss, log_p, log_det = calc_loss(
-            log_p, logdet, args.img_size, n_bins, args.n_channels
-        )
-        print(args.delta, log_p.item(), log_det.item(), file=f_ll)
-    f_ll.close()
-    f_loss.close()
+                f_ll = open(f"ll/ll_{repr_args}_{i + 1}.txt", "w")
+                train_loader, val_loader, train_val_loader = dataset_f(
+                    args.batch, args.img_size, args.n_channels
+                )
+                train_val_loader = iter(train_val_loader)
+                for image_val in val_loader:
+                    image = image_val
+                    image = image.to(device)
+                    log_p_val, logdet_val, _ = model(
+                        image + torch.randn_like(image) * args.delta
+                    )
+                    image = next(train_val_loader)
+                    image = image.to(device)
+                    log_p_train_val, logdet_train_val, _ = model(
+                        image + torch.randn_like(image) * args.delta
+                    )
+                    for (
+                            lpv,
+                            ldv,
+                            lptv,
+                            ldtv,
+                    ) in zip(log_p_val, logdet_val, log_p_train_val, logdet_train_val):
+                        print(
+                            args.delta,
+                            lpv.item(),
+                            ldv.item(),
+                            lptv.item(),
+                            ldtv.item(),
+                            file=f_ll,
+                        )
+                f_ll.close()
+    f_train_loss.close()
+    f_test_loss.close()
 
 
 if __name__ == "__main__":
