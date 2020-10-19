@@ -36,7 +36,7 @@ def train(args, model, optimizer):
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
 
-    deltas = create_deltas_sequence(0.02, 0.001)
+    deltas = create_deltas_sequence(0.1, 0.005)
     args.delta = deltas[0]
 
     epoch_losses = []
