@@ -114,7 +114,7 @@ def memory_mnist(batch_size, image_size, n_channels, return_y=False):
         )
 
 
-def memory_fashion(batch_size, image_size, n_channels):
+def memory_fashion(batch_size, image_size, n_channels, return_y=False):
     transform = transforms.Compose(
         [
             transforms.ToPILImage(),
@@ -148,7 +148,16 @@ def memory_fashion(batch_size, image_size, n_channels):
         batch_size=batch_size,
         shuffle=False,
     )
-    return train_loader, val_loader, train_val_loader
+    if not return_y:
+        return train_loader, val_loader, train_val_loader
+    else:
+        return (
+            train_loader,
+            val_loader,
+            train_val_loader,
+            data.targets[:55000],
+            data.targets[55000:],
+        )
 
 
 def point_2d(batch_size, image_size, n_channels):
