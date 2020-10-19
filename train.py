@@ -111,10 +111,10 @@ def train(args, model, optimizer):
                         image + torch.randn_like(image) * args.delta
                     )
                     for (
-                            lpv,
-                            ldv,
-                            lptv,
-                            ldtv,
+                        lpv,
+                        ldv,
+                        lptv,
+                        ldtv,
                     ) in zip(log_p_val, logdet_val, log_p_train_val, logdet_train_val):
                         print(
                             args.delta,

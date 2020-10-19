@@ -23,14 +23,21 @@ def test(args, model):
     )
     with torch.no_grad():
         for ind, image in enumerate(train_loader):
-            image = image.repeat(200, 1, 1, 1)
+            image = image.repeat(100, 1, 1, 1)
             image = image.to(device)
             image = image + torch.randn_like(image) * args.delta
-    #         print(image)
+            #         print(image)
             print(ind, end=",")
             log_p, log_det, _ = model(image)
             for i in range(log_p.shape[0]):
-                print(ind, args.delta, log_p[i].item(), log_det[i].item(), train_labels[ind].item(), file=f)
+                print(
+                    ind,
+                    args.delta,
+                    log_p[i].item(),
+                    log_det[i].item(),
+                    train_labels[ind].item(),
+                    file=f,
+                )
             if ind >= 9999:
                 break
     f.close()
