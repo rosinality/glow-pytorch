@@ -40,8 +40,8 @@ def train(args, model, optimizer):
     args.delta = deltas[0]
 
     epoch_losses = []
-    f_train_loss = open(f"losses/losses_train_{repr_args}_.txt", "w", buffering=1)
-    f_test_loss = open(f"losses/losses_test_{repr_args}_.txt", "w", buffering=1)
+    f_train_loss = open(f"losses/seq_losses_train_{repr_args}_.txt", "w", buffering=1)
+    f_test_loss = open(f"losses/seq_losses_test_{repr_args}_.txt", "w", buffering=1)
 
     with tqdm(range(200)) as pbar:
         for i in pbar:
@@ -67,7 +67,7 @@ def train(args, model, optimizer):
             with torch.no_grad():
                 utils.save_image(
                     model.reverse(z_sample).cpu().data,
-                    f"sample/sample_{repr_args}_{str(i + 1).zfill(6)}.png",
+                    f"sample/seq_sample_{repr_args}_{str(i + 1).zfill(6)}.png",
                     normalize=True,
                     nrow=10,
                     range=(-0.5, 0.5),
@@ -95,10 +95,10 @@ def train(args, model, optimizer):
                 epoch_losses.append(current_loss)
                 if (i + 1) % 10 == 0:
                     torch.save(
-                        model.state_dict(), f"checkpoint/model_{repr_args}_{i + 1}_.pt"
+                        model.state_dict(), f"checkpoint/seq_model_{repr_args}_{i + 1}_.pt"
                     )
 
-                f_ll = open(f"ll/ll_{repr_args}_{i + 1}.txt", "w")
+                f_ll = open(f"ll/seq_ll_{repr_args}_{i + 1}.txt", "w")
                 train_loader, val_loader, train_val_loader = dataset_f(
                     args.batch, args.img_size, args.n_channels
                 )
