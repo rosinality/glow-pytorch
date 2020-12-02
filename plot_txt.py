@@ -9,7 +9,7 @@ def plot_txt(img):
     string = ""
     for i in range(img.shape[0]):
         for j in range(min(img.shape[1], 200)):
-            if img[i,j] >= 128:
+            if img[i, j] >= 128:
                 string += "O"
             else:
                 string += " "

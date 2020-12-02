@@ -54,7 +54,11 @@ def train(args, model, optimizer):
             for image in train_loader:
                 optimizer.zero_grad()
                 image = image.to(device)
-                log_p, logdet, _ = model(image + torch.randn_like(image) * args.delta)
+                log_p, logdet, _ = model(
+                    image
+                    + torch.randn_like(image) * args.delta
+                    + torch.rand_like(image) / n_bins
+                )
                 logdet = logdet.mean()
                 loss, log_p, log_det = calc_loss(
                     log_p, logdet, args.img_size, n_bins, args.n_channels
@@ -78,7 +82,9 @@ def train(args, model, optimizer):
                 for image in val_loader:
                     image = image.to(device)
                     log_p, logdet, _ = model(
-                        image + torch.randn_like(image) * args.delta
+                        image
+                        + torch.randn_like(image) * args.delta
+                        + torch.rand_like(image) / n_bins
                     )
                     logdet = logdet.mean()
                     loss, log_p, log_det = calc_loss(
@@ -95,7 +101,8 @@ def train(args, model, optimizer):
                 epoch_losses.append(current_loss)
                 if (i + 1) % 10 == 0:
                     torch.save(
-                        model.state_dict(), f"checkpoint/seq_model_{repr_args}_{i + 1}_.pt"
+                        model.state_dict(),
+                        f"checkpoint/seq_model_{repr_args}_{i + 1}_.pt",
                     )
 
                 f_ll = open(f"ll/seq_ll_{repr_args}_{i + 1}.txt", "w")
@@ -107,12 +114,16 @@ def train(args, model, optimizer):
                     image = image_val
                     image = image.to(device)
                     log_p_val, logdet_val, _ = model(
-                        image + torch.randn_like(image) * args.delta
+                        image
+                        + torch.randn_like(image) * args.delta
+                        + torch.rand_like(image) / n_bins
                     )
                     image = next(train_val_loader)
                     image = image.to(device)
                     log_p_train_val, logdet_train_val, _ = model(
-                        image + torch.randn_like(image) * args.delta
+                        image
+                        + torch.randn_like(image) * args.delta
+                        + torch.rand_like(image) / n_bins
                     )
                     for (
                         lpv,

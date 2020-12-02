@@ -25,7 +25,11 @@ def test(args, model):
         for ind, image in enumerate(train_loader):
             image = image.repeat(100, 1, 1, 1)
             image = image.to(device)
-            image = image + torch.randn_like(image) * args.delta
+            image = (
+                image
+                + torch.randn_like(image) * args.delta
+                + torch.rand_like(image) / n_bins
+            )
             #         print(image)
             print(ind, end=",")
             log_p, log_det, _ = model(image)
