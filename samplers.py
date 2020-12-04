@@ -111,6 +111,7 @@ def memory_mnist(batch_size, image_size, n_channels, return_y=False):
             train_val_loader,
             data.targets[:55000],
             data.targets[55000:],
+            data.targets[50000:55000],
         )
 
 
@@ -157,41 +158,5 @@ def memory_fashion(batch_size, image_size, n_channels, return_y=False):
             train_val_loader,
             data.targets[:55000],
             data.targets[55000:],
+            data.targets[50000:55000],
         )
-
-
-def point_2d(batch_size, image_size, n_channels):
-    transform = transforms.Compose(
-        [
-            transforms.ToPILImage(),
-            transforms.Resize(image_size),
-            transforms.CenterCrop(image_size),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,) * n_channels, (1,) * n_channels),
-        ]
-    )
-    N = 5000
-    split = int(0.9 * N)
-    data = generate_2D_point_image(N)
-
-    train_data = CustomTensorDataset(data.data[:split].clone(), transform=transform)
-    train_val_data = CustomTensorDataset(
-        data.data[(N - 2 * split) : split].clone(), transform=transform
-    )
-    val_data = CustomTensorDataset(data.data[split:].clone(), transform=transform)
-    train_loader = torch.utils.data.DataLoader(
-        train_data,
-        batch_size=batch_size,
-        shuffle=False,
-    )
-    train_val_loader = torch.utils.data.DataLoader(
-        train_val_data,
-        batch_size=batch_size,
-        shuffle=False,
-    )
-    val_loader = torch.utils.data.DataLoader(
-        val_data,
-        batch_size=batch_size,
-        shuffle=False,
-    )
-    return train_loader, val_loader, train_val_loader
