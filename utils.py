@@ -21,17 +21,17 @@ def net_args(parser):
         "--affine", action="store_true", help="use affine coupling instead of additive"
     )
     parser.add_argument(
-        "--train_dequantization",
+        "--tr_dq",
         action="store_true",
         help="use de-quantization during training",
     )
     parser.add_argument(
-        "--test_dequantization",
+        "--te_dq",
         action="store_true",
         help="use de-quantization during testing",
     )
     parser.add_argument(
-        "--test_noise", action="store_false", help="use noise during testing"
+        "--te_noise", action="store_false", help="use noise during testing"
     )
     parser.add_argument("--n_bits", default=5, type=int, help="number of bits")
     parser.add_argument("--lr", default=1e-4, type=float, help="learning rate")
