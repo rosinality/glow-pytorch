@@ -9,6 +9,7 @@ from utils import net_args, string_args
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
 parser.add_argument("model_path", type=str, help="path to model weights")
 
+#TODO Change to generation without noise
 
 def test(args, model):
     if args.dataset == "mnist":
@@ -21,24 +22,23 @@ def test(args, model):
     train_loader, val_loader, train_val_loader, train_labels, val_labels = dataset_f(
         1, args.img_size, args.n_channels, return_y=True
     )
+    n_bins = 2.0 ** args.n_bits
     with torch.no_grad():
         for ind, image in enumerate(train_loader):
             image = image.repeat(100, 1, 1, 1)
             image = image.to(device)
-            image = (
-                image
-                + torch.randn_like(image) * args.delta
-                + torch.rand_like(image) / n_bins
-            )
-            #         print(image)
-            print(ind, end=",")
-            log_p, log_det, _ = model(image)
+            noisy_image = image
+            if args.te_dq:
+                noisy_image += torch.rand_like(image) / n_bins
+            if args.te_noise:
+                noisy_image += torch.randn_like(image) * args.delta
+            log_p, logdet, _ = model(noisy_image)
             for i in range(log_p.shape[0]):
                 print(
                     ind,
                     args.delta,
                     log_p[i].item(),
-                    log_det[i].item(),
+                    logdet[i].item(),
                     train_labels[ind].item(),
                     file=f,
                 )

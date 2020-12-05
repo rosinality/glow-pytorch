@@ -52,7 +52,7 @@ def train(args, model, optimizer):
             for image in train_loader:
                 optimizer.zero_grad()
                 image = image.to(device)
-                if args.train_dequantization:
+                if args.tr_dq:
                     noisy_image += torch.rand_like(image) / n_bins
                 noisy_image += torch.randn_like(image) * args.delta
                 log_p, logdet, _ = model(noisy_image)
@@ -79,9 +79,9 @@ def train(args, model, optimizer):
                 for image in val_loader:
                     image = image.to(device)
                     noisy_image = image
-                    if args.test_dequantization:
+                    if args.te_dq:
                         noisy_image += torch.rand_like(image) / n_bins
-                    if args.test_noise:
+                    if args.te_noise:
                         noisy_image += torch.randn_like(image) * args.delta
                     log_p, logdet, _ = model(noisy_image)
                     logdet = logdet.mean()
@@ -111,17 +111,17 @@ def train(args, model, optimizer):
                 for image_val in val_loader:
                     image = image_val
                     image = image.to(device)
-                    if args.test_dequantization:
+                    if args.te_dq:
                         noisy_image += torch.rand_like(image) / n_bins
-                    if args.test_noise:
+                    if args.te_noise:
                         noisy_image += torch.randn_like(image) * args.delta
                     log_p_val, logdet_val, _ = model(noisy_image)
 
                     image = next(train_val_loader)
                     image = image.to(device)
-                    if args.test_dequantization:
+                    if args.te_dq:
                         noisy_image += torch.rand_like(image) / n_bins
-                    if args.test_noise:
+                    if args.te_noise:
                         noisy_image += torch.randn_like(image) * args.delta
                     log_p_train_val, logdet_train_val, _ = model(noisy_image)
                     for (

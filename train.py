@@ -13,7 +13,6 @@ from utils import (
     calc_z_shapes,
     calc_loss,
     string_args,
-    create_deltas_sequence,
 )
 
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
@@ -49,7 +48,7 @@ def train(args, model, optimizer):
                 optimizer.zero_grad()
                 image = image.to(device)
                 noisy_image = image
-                if args.train_dequantization:
+                if args.tr_dq:
                     noisy_image += torch.rand_like(image) / n_bins
                 noisy_image += torch.randn_like(image) * args.delta
                 log_p, logdet, _ = model(noisy_image)
@@ -77,9 +76,9 @@ def train(args, model, optimizer):
                 for image in val_loader:
                     image = image.to(device)
                     noisy_image = image
-                    if args.test_dequantization:
+                    if args.te_dq:
                         noisy_image += torch.rand_like(image) / n_bins
-                    if args.test_noise:
+                    if args.te_noise:
                         noisy_image += torch.randn_like(image) * args.delta
                     log_p, logdet, _ = model(noisy_image)
                     logdet = logdet.mean()
@@ -109,18 +108,18 @@ def train(args, model, optimizer):
                     image = image_val
                     image = image.to(device)
                     noisy_image = image
-                    if args.test_dequantization:
+                    if args.te_dq:
                         noisy_image += torch.rand_like(image) / n_bins
-                    if args.test_noise:
+                    if args.te_noise:
                         noisy_image += torch.randn_like(image) * args.delta
                     log_p_val, logdet_val, _ = model(noisy_image)
 
                     image = next(train_val_loader)
                     image = image.to(device)
                     noisy_image = image
-                    if args.test_dequantization:
+                    if args.te_dq:
                         noisy_image += torch.rand_like(image) / n_bins
-                    if args.test_noise:
+                    if args.te_noise:
                         noisy_image += torch.randn_like(image) * args.delta
                     log_p_train_val, logdet_train_val, _ = model(noisy_image)
 
