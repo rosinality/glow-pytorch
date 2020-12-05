@@ -20,6 +20,19 @@ def net_args(parser):
     parser.add_argument(
         "--affine", action="store_true", help="use affine coupling instead of additive"
     )
+    parser.add_argument(
+        "--train_dequantization",
+        action="store_true",
+        help="use de-quantization during training",
+    )
+    parser.add_argument(
+        "--test_dequantization",
+        action="store_true",
+        help="use de-quantization during testing",
+    )
+    parser.add_argument(
+        "--test_noise", action="store_true", help="use noise during testing"
+    )
     parser.add_argument("--n_bits", default=5, type=int, help="number of bits")
     parser.add_argument("--lr", default=1e-4, type=float, help="learning rate")
     parser.add_argument("--img_size", default=64, type=int, help="image size")
