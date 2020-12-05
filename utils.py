@@ -31,7 +31,7 @@ def net_args(parser):
         help="use de-quantization during testing",
     )
     parser.add_argument(
-        "--test_noise", action="store_true", help="use noise during testing"
+        "--test_noise", action="store_false", help="use noise during testing"
     )
     parser.add_argument("--n_bits", default=5, type=int, help="number of bits")
     parser.add_argument("--lr", default=1e-4, type=float, help="learning rate")
