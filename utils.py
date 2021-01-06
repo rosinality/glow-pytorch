@@ -51,7 +51,7 @@ def net_args(parser):
         "--device",
         default="cpu",
         type=str,
-        choices=["cuda:0", "cuda:1"],
+        choices=["cpu", "cuda:0", "cuda:1"],
         help="device used to run the neural network",
     )
     parser.add_argument(
