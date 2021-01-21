@@ -49,6 +49,8 @@ def train(args, model, optimizer):
             )
             train_losses = []
             for image in train_loader:
+                if isinstance(image, list):
+                    image = image[0]
                 optimizer.zero_grad()
                 image = image.to(device)
                 noisy_image = image
