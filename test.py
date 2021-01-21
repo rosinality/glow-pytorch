@@ -9,7 +9,8 @@ from utils import net_args, string_args
 parser = net_args(argparse.ArgumentParser(description="Glow trainer"))
 parser.add_argument("model_path", type=str, help="path to model weights")
 
-#TODO Change to generation without noise
+# TODO Change to generation without noise
+
 
 def test(args, model):
     if args.dataset == "mnist":

@@ -72,8 +72,7 @@ def memory_mnist(batch_size, image_size, n_channels, return_y=False):
     transform = transforms.Compose(
         [
             transforms.ToPILImage(),
-            transforms.Resize(image_size),
-            transforms.CenterCrop(image_size),
+            transforms.Pad(2),
             transforms.ToTensor(),
             transforms.Normalize((0.5,) * n_channels, (1,) * n_channels),
         ]
@@ -119,12 +118,12 @@ def memory_fashion(batch_size, image_size, n_channels, return_y=False):
     transform = transforms.Compose(
         [
             transforms.ToPILImage(),
-            transforms.Resize(image_size),
-            transforms.CenterCrop(image_size),
+            transforms.Pad(2),
             transforms.ToTensor(),
             transforms.Normalize((0.5,) * n_channels, (1,) * n_channels),
         ]
     )
+
     data = torchvision.datasets.FashionMNIST(
         "~/datasets/fashion_mnist/", train=True, download=True, transform=transform
     )
@@ -160,3 +159,55 @@ def memory_fashion(batch_size, image_size, n_channels, return_y=False):
             data.targets[55000:],
             data.targets[50000:55000],
         )
+
+
+def celeba(batch_size, image_size, n_channels, return_y=False):
+    train_loader = torch.utils.data.DataLoader(
+        datasets.ImageFolder(
+            root="/home/ptempczyk/datasets/celeba/train/",
+            transform=transforms.Compose(
+                [
+                    transforms.Resize(64),
+                    transforms.CenterCrop(64),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                ]
+            ),
+        ),
+        batch_size=batch_size,
+        shuffle=False,
+    )
+    train_val_loader = torch.utils.data.DataLoader(
+        datasets.ImageFolder(
+            root="/home/ptempczyk/datasets/celeba/train_val/",
+            transform=transforms.Compose(
+                [
+                    transforms.Resize(64),
+                    transforms.CenterCrop(64),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                ]
+            ),
+        ),
+        batch_size=batch_size,
+        shuffle=False,
+    )
+    val_loader = torch.utils.data.DataLoader(
+        datasets.ImageFolder(
+            root="/home/ptempczyk/datasets/celeba/val/",
+            transform=transforms.Compose(
+                [
+                    transforms.Resize(64),
+                    transforms.CenterCrop(64),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                ]
+            ),
+        ),
+        batch_size=batch_size,
+        shuffle=False,
+    )
+    if not return_y:
+        return train_loader, val_loader, train_val_loader
+    else:
+        raise ValueError("CelebA does not contain y labels")
