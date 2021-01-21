@@ -80,6 +80,8 @@ def train(args, model, optimizer):
                 logdets = []
                 logps = []
                 for image in val_loader:
+                    if isinstance(image, list):
+                        image = image[0]
                     image = image.to(device)
                     log_p, logdet, _ = model(image)
                     logdet = logdet.mean()
@@ -107,10 +109,14 @@ def train(args, model, optimizer):
                 train_val_loader = iter(train_val_loader)
                 for image_val in val_loader:
                     image = image_val
+                    if isinstance(image, list):
+                        image = image[0]
                     image = image.to(device)
                     log_p_val, logdet_val, _ = model(image)
 
                     image = next(train_val_loader)
+                    if isinstance(image, list):
+                        image = image[0]
                     image = image.to(device)
                     log_p_train_val, logdet_train_val, _ = model(image)
 
