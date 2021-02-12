@@ -1,1 +1,1 @@
---batch 16 --img_size 64 --epochs 100 --lr=0.00001 --n_channels 3 --affine --n_bits 8 --tr_dq --dataset celeba
+--batch 16 --img_size 64 --epochs 100 --lr=0.00001 --n_channels 3 --affine --n_bits 8 --dataset celeba

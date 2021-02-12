@@ -1,1 +1,1 @@
---batch 64 --img_size 32 --epochs 200 --lr=0.00005 --n_channels 1 --affine --n_bits 8 --tr_dq --dataset fashion_mnist
+--batch 64 --img_size 32 --epochs 200 --lr=0.00005 --n_channels 1 --affine --n_bits 8 --dataset fashion_mnist
