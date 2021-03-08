@@ -45,11 +45,12 @@ def train(args, model, optimizer):
     try:
         model.load_state_dict(torch.load(last_model_path))
         model.eval()
+        f_epoch = open(f"checkpoint/last_epoch_{repr_args}.txt", "r", buffering=1)
+        epoch_n = int(f_epoch.readline().strip())
+        f_epoch.close()
     except FileNotFoundError:
         print("Training the model from scratch.")
-    f_epoch = open(f"checkpoint/last_epoch_{repr_args}.txt", "r", buffering=1)
-    epoch_n = int(f_epoch.readline().strip())
-    f_epoch.close()
+        epoch_n = 0
 
     with tqdm(range(epoch_n, args.epochs + epoch_n)) as pbar:
         for i in pbar:
