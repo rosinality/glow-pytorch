@@ -42,8 +42,11 @@ def train(args, model, optimizer):
     f_test_loss = open(f"losses/losses_test_{repr_args}_.txt", "a", buffering=1)
 
     last_model_path = f"checkpoint/model_{repr_args}_last_.pt"
-    model.load_state_dict(torch.load(last_model_path))
-    model.eval()
+    try:
+        model.load_state_dict(torch.load(last_model_path))
+        model.eval()
+    except FileNotFoundError:
+        print("Training the model from scratch.")
     f_epoch = open(f"checkpoint/last_epoch_{repr_args}.txt", "r", buffering=1)
     epoch_n = int(f_epoch.readline().strip())
     f_epoch.close()
