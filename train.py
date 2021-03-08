@@ -38,10 +38,17 @@ def train(args, model, optimizer):
         z_sample.append(z_new.to(device))
 
     epoch_losses = []
-    f_train_loss = open(f"losses/losses_train_{repr_args}_.txt", "w", buffering=1)
-    f_test_loss = open(f"losses/losses_test_{repr_args}_.txt", "w", buffering=1)
+    f_train_loss = open(f"losses/losses_train_{repr_args}_.txt", "a", buffering=1)
+    f_test_loss = open(f"losses/losses_test_{repr_args}_.txt", "a", buffering=1)
 
-    with tqdm(range(args.epochs)) as pbar:
+    last_model_path = f"checkpoint/model_{repr_args}_last_.pt"
+    model.load_state_dict(torch.load(last_model_path))
+    model.eval()
+    f_epoch = open(f"checkpoint/last_epoch_{repr_args}.txt", "r", buffering=1)
+    epoch_n = int(f_epoch.readline().strip())
+    f_epoch.close()
+
+    with tqdm(range(epoch_n, args.epochs + epoch_n)) as pbar:
         for i in pbar:
             repr_args = string_args(args)
             train_loader, val_loader, train_val_loader = dataset_f(
@@ -97,10 +104,16 @@ def train(args, model, optimizer):
                 current_loss = np.mean(losses)
                 print(f"{current_loss},{args.delta},{i + 1}", file=f_test_loss)
                 epoch_losses.append(current_loss)
-                if (i + 1) % 10 == 0:
+                if (i + 1) % 5 == 0:
                     torch.save(
                         model.state_dict(), f"checkpoint/model_{repr_args}_{i + 1}_.pt"
                     )
+                torch.save(model.state_dict(), last_model_path)
+                f_epoch = open(
+                    f"checkpoint/last_epoch_{repr_args}.txt", "w", buffering=1
+                )
+                f_epoch.write(str(i + 1))
+                f_epoch.close()
 
                 f_ll = open(f"ll/ll_{repr_args}_{i + 1}.txt", "w")
                 train_loader, val_loader, train_val_loader = dataset_f(
