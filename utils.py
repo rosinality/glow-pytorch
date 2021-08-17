@@ -44,7 +44,7 @@ def net_args(parser):
         "--dataset",
         default="mnist",
         type=str,
-        choices=["mnist", "fashion_mnist", "point_2d", "celeba"],
+        choices=["mnist", "fashion_mnist", "point_2d", "celeba", "ffhq_5", "cifar_horses_40", "ffhq_50"],
         help="name of the dataset",
     )
     parser.add_argument(

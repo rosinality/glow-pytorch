@@ -211,3 +211,84 @@ def celeba(batch_size, image_size, n_channels, return_y=False):
         return train_loader, val_loader, train_val_loader
     else:
         raise ValueError("CelebA does not contain y labels")
+
+
+def ffhq_5(batch_size, image_size, n_channels, return_y=False):
+    def get_loader(root):
+        loader = torch.utils.data.DataLoader(
+            datasets.ImageFolder(
+                root=root,
+                transform=transforms.Compose(
+                    [
+                        #transforms.Resize(64),
+                        #transforms.CenterCrop(64),
+                        transforms.ToTensor(),
+                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    ]
+                ),
+            ),
+            batch_size=batch_size,
+            shuffle=False,
+        )
+        return loader
+    train_loader = get_loader("/home/rm360179/image-generator/ffhq_5/train/")
+    train_val_loader = get_loader("/home/rm360179/image-generator/ffhq_5/train_val/")
+    val_loader = get_loader("/home/rm360179/image-generator/ffhq_5/val/")
+    if not return_y:
+        return train_loader, val_loader, train_val_loader
+    else:
+        raise ValueError("ffhq_5 does not contain y labels")
+
+
+def cifar_horses_40(batch_size, image_size, n_channels, return_y=False):
+    def get_loader(root):
+        loader = torch.utils.data.DataLoader(
+            datasets.ImageFolder(
+                root=root,
+                transform=transforms.Compose(
+                    [
+                        #transforms.Resize(64),
+                        #transforms.CenterCrop(64),
+                        transforms.ToTensor(),
+                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    ]
+                ),
+            ),
+            batch_size=batch_size,
+            shuffle=False,
+        )
+        return loader
+    train_loader = get_loader("/home/rm360179/image-generator/cifar_horses_40/train/")
+    train_val_loader = get_loader("/home/rm360179/image-generator/cifar_horses_40/train_val/")
+    val_loader = get_loader("/home/rm360179/image-generator/cifar_horses_40/val/")
+    if not return_y:
+        return train_loader, val_loader, train_val_loader
+    else:
+        raise ValueError("cifar_horses does not contain y labels")
+
+def ffhq_50(batch_size, image_size, n_channels, return_y=False):
+    def get_loader(root):
+        loader = torch.utils.data.DataLoader(
+            datasets.ImageFolder(
+                root=root,
+                transform=transforms.Compose(
+                    [
+                        #transforms.Resize(64),
+                        #transforms.CenterCrop(64),
+                        transforms.ToTensor(),
+                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    ]
+                ),
+            ),
+            batch_size=batch_size,
+            shuffle=False,
+        )
+        return loader
+    train_loader = get_loader("/home/rm360179/image-generator/ffhq_50/train/")
+    train_val_loader = get_loader("/home/rm360179/image-generator/ffhq_50/train_val/")
+    val_loader = get_loader("/home/rm360179/image-generator/ffhq_50/val/")
+    if not return_y:
+        return train_loader, val_loader, train_val_loader
+    else:
+        raise ValueError("ffhq_50 does not contain y labels")
+

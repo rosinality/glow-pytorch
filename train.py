@@ -7,7 +7,7 @@ from torchvision import utils
 from tqdm import tqdm
 
 from model import Glow
-from samplers import memory_mnist, memory_fashion, celeba
+from samplers import memory_mnist, memory_fashion, celeba, ffhq_gan_32, cifar_horses_40, ffhq_50
 from utils import (
     net_args,
     calc_z_shapes,
@@ -25,6 +25,12 @@ def train(args, model, optimizer):
         dataset_f = memory_fashion
     elif args.dataset == "celeba":
         dataset_f = celeba
+    elif args.dataset == "ffhq_gan_32":
+        dataset_f = ffhq_gan_32
+    elif args.dataset == "cifar_horses_40":
+        dataset_f = cifar_horses_40
+    elif args.dataset == "ffhq_50":
+        dataset_f = ffhq_50
     else:
         raise ValueError("Unknown dataset:", args.dataset)
 
@@ -108,10 +114,13 @@ def train(args, model, optimizer):
                 current_loss = np.mean(losses)
                 print(f"{current_loss},{args.delta},{i + 1}", file=f_test_loss)
                 epoch_losses.append(current_loss)
+                '''
+                too much space
                 if (i + 1) % 5 == 0:
                     torch.save(
                         model.state_dict(), f"checkpoint/model_{repr_args}_{i + 1}_.pt"
                     )
+                '''
                 torch.save(model.state_dict(), last_model_path)
                 f_epoch = open(
                     f"checkpoint/last_epoch_{repr_args}.txt", "w", buffering=1
