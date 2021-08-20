@@ -7,7 +7,7 @@ from torchvision import utils
 from tqdm import tqdm
 
 from model import Glow
-from samplers import memory_mnist, memory_fashion, celeba, ffhq_gan_32, cifar_horses_40, ffhq_50
+from samplers import memory_mnist, memory_fashion, celeba, ffhq_5, cifar_horses_40, ffhq_50
 from utils import (
     net_args,
     calc_z_shapes,
