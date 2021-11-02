@@ -17,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser(description="Glow trainer")
 parser.add_argument("--batch", default=16, type=int, help="batch size")
-parser.add_argument("--iter", default=200000, type=int, help="maximum iterations")
+parser.add_argument("--iter", default=200, type=int, help="maximum iterations")
 parser.add_argument(
     "--n_flow", default=32, type=int, help="number of flows in each block"
 )
@@ -166,6 +166,8 @@ if __name__ == "__main__":
     model_single = Glow(
         3, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
     )
+    # play with model_single
+
     model = nn.DataParallel(model_single)
     # model = model_single
     model = model.to(device)

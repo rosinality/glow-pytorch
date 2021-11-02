@@ -1,9 +1,10 @@
+from math import log, pi
+
+import numpy as np
 import torch
+from scipy import linalg as la
 from torch import nn
 from torch.nn import functional as F
-from math import log, pi, exp
-import numpy as np
-from scipy import linalg as la
 
 logabs = lambda x: torch.log(torch.abs(x))
 
@@ -23,17 +24,17 @@ class ActNorm(nn.Module):
             flatten = input.permute(1, 0, 2, 3).contiguous().view(input.shape[1], -1)
             mean = (
                 flatten.mean(1)
-                .unsqueeze(1)
-                .unsqueeze(2)
-                .unsqueeze(3)
-                .permute(1, 0, 2, 3)
+                    .unsqueeze(1)
+                    .unsqueeze(2)
+                    .unsqueeze(3)
+                    .permute(1, 0, 2, 3)
             )
             std = (
                 flatten.std(1)
-                .unsqueeze(1)
-                .unsqueeze(2)
-                .unsqueeze(3)
-                .permute(1, 0, 2, 3)
+                    .unsqueeze(1)
+                    .unsqueeze(2)
+                    .unsqueeze(3)
+                    .permute(1, 0, 2, 3)
             )
 
             self.loc.data.copy_(-mean)
@@ -74,7 +75,7 @@ class InvConv2d(nn.Module):
 
         out = F.conv2d(input, self.weight)
         logdet = (
-            height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
+                height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
         )
 
         return out, logdet
@@ -88,7 +89,7 @@ class InvConv2d(nn.Module):
 class InvConv2dLU(nn.Module):
     def __init__(self, in_channel):
         super().__init__()
-
+        # print(f'InvConv2dLU constructor with in_channel = {in_channel}')
         weight = np.random.randn(in_channel, in_channel)
         q, _ = la.qr(weight)
         w_p, w_l, w_u = la.lu(q.astype(np.float32))
@@ -123,9 +124,9 @@ class InvConv2dLU(nn.Module):
 
     def calc_weight(self):
         weight = (
-            self.w_p
-            @ (self.w_l * self.l_mask + self.l_eye)
-            @ ((self.w_u * self.u_mask) + torch.diag(self.s_sign * torch.exp(self.w_s)))
+                self.w_p
+                @ (self.w_l * self.l_mask + self.l_eye)
+                @ ((self.w_u * self.u_mask) + torch.diag(self.s_sign * torch.exp(self.w_s)))
         )
 
         return weight.unsqueeze(2).unsqueeze(3)
@@ -220,7 +221,7 @@ class Flow(nn.Module):
 
         else:
             self.invconv = InvConv2d(in_channel)
-
+        # TODO add InvConv2dSVD
         self.coupling = AffineCoupling(in_channel, affine=affine)
 
     def forward(self, input):
@@ -334,7 +335,7 @@ class Block(nn.Module):
 
 class Glow(nn.Module):
     def __init__(
-        self, in_channel, n_flow, n_block, affine=True, conv_lu=True
+            self, in_channel, n_flow, n_block, affine=True, conv_lu=True
     ):
         super().__init__()
 
