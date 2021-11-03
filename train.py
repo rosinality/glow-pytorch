@@ -5,19 +5,19 @@ from math import log
 from time import time
 
 import torch
-from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, utils
 from tqdm import tqdm
 
-from model import Glow
+from model import Glow, InvConv2d, InvConv2dLU
 
 LOGGING_LEVEL = logging.DEBUG
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+LOGGING_LEVEL = logging.DEBUG
 parser = argparse.ArgumentParser(description="Glow trainer")
 parser.add_argument("--batch", default=16, type=int, help="batch size")
-parser.add_argument("--iter", default=5000, type=int, help="maximum iterations")
+
+parser.add_argument("--iter", default=200, type=int, help="maximum iterations")
 parser.add_argument(
     "--n_flow", default=32, type=int, help="number of flows in each block"
 )
@@ -170,17 +170,37 @@ def train(args, model, optimizer):
                 f'\nexpected finish time = {datetime.now() + timedelta(seconds=(args.iter - i) * avg_exec_time)}\n')
 
 
+def play_w_model(model):
+    logging.basicConfig(level=LOGGING_LEVEL)
+    logger = logging.getLogger(play_w_model.__name__)
+    logger.debug(f'model has {len(model.blocks)} blocks')
+    for i, b in enumerate(model.blocks):
+        logger.debug(f'block[{i}] has {len(b.flows)} flow')
+        for j, f in enumerate(b.flows):
+            if isinstance(f.invconv, InvConv2d):
+                logger.debug(f'flow[{j}] is of type {str(InvConv2d)} with weight of size {f.invconv.weight.size()}')
+            elif isinstance(f.invconv, InvConv2dLU):
+                logger.debug(f'flow[{j}] is of type {str(InvConv2dLU)} with wp,wu,wl of size of sizes'
+                             f'{f.invconv.w_p.size(), f.invconv.w_u.size(), f.invconv.w_l.size()}')
+
+
 if __name__ == "__main__":
+    logging.basicConfig(level=LOGGING_LEVEL)
+    logger = logging.getLogger(__name__)
     args = parser.parse_args()
-    print(args)
-
+    logger.info(args)
     model_single = Glow(
-        3, args.n_flow, args.n_block, affine=args.affine, conv_lu=not args.no_lu
+        3, args.n_flow, args.n_block, affine=args.affine, conv_lu=False
     )
-    model = nn.DataParallel(model_single)
-    # model = model_single
-    model = model.to(device)
-
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
-
-    train(args, model, optimizer)
+    # play with model_single
+    play_w_model(model_single)
+    # FIXME remove
+    logger.debug('Premature exit !!!')
+    sys.exit(-1)
+    # model = nn.DataParallel(model_single)
+    # # model = model_single
+    # model = model.to(device)
+    #
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    #
+    # train(args, model, optimizer)
