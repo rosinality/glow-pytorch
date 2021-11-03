@@ -1,23 +1,23 @@
-from tqdm import tqdm
-import numpy as np
-from PIL import Image
-from math import log, sqrt, pi
-
 import argparse
+import logging
+from datetime import datetime, timedelta
+from math import log
+from time import time
 
 import torch
 from torch import nn, optim
-from torch.autograd import Variable, grad
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, utils
+from tqdm import tqdm
 
 from model import Glow
 
+LOGGING_LEVEL = logging.DEBUG
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser(description="Glow trainer")
 parser.add_argument("--batch", default=16, type=int, help="batch size")
-parser.add_argument("--iter", default=200000, type=int, help="maximum iterations")
+parser.add_argument("--iter", default=5000, type=int, help="maximum iterations")
 parser.add_argument(
     "--n_flow", default=32, type=int, help="number of flows in each block"
 )
@@ -94,6 +94,9 @@ def calc_loss(log_p, logdet, image_size, n_bins):
 
 
 def train(args, model, optimizer):
+    logging.basicConfig(level=LOGGING_LEVEL)
+    logger = logging.getLogger(train.__name__)
+
     dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
 
@@ -102,9 +105,10 @@ def train(args, model, optimizer):
     for z in z_shapes:
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
-
+    exec_time_total = 0.0
     with tqdm(range(args.iter)) as pbar:
         for i in pbar:
+            start_time = time()
             image, _ = next(dataset)
             image = image.to(device)
 
@@ -157,6 +161,13 @@ def train(args, model, optimizer):
                 torch.save(
                     optimizer.state_dict(), f"checkpoint/optim_{str(i + 1).zfill(6)}.pt"
                 )
+            end_time = time()
+            exec_time_total += end_time - start_time
+            avg_exec_time = float(exec_time_total) / (i + 1)
+            logger.debug(f'\nFor iteration {i} out of {args.iter} , average execution time so far is '
+                         f'{avg_exec_time} seconds\n')
+            logger.debug(
+                f'\nexpected finish time = {datetime.now() + timedelta(seconds=(args.iter - i) * avg_exec_time)}\n')
 
 
 if __name__ == "__main__":
