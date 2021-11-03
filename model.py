@@ -1,3 +1,4 @@
+import logging
 from math import log, pi
 
 import numpy as np
@@ -7,6 +8,7 @@ from torch import nn
 from torch.nn import functional as F
 
 logabs = lambda x: torch.log(torch.abs(x))
+LOGGING_LEVEL = logging.DEBUG
 
 
 class ActNorm(nn.Module):
@@ -258,6 +260,7 @@ class Block(nn.Module):
         squeeze_dim = in_channel * 4
 
         self.flows = nn.ModuleList()
+        self.conv_lu = conv_lu
         for i in range(n_flow):
             self.flows.append(Flow(squeeze_dim, affine=affine, conv_lu=conv_lu))
 
@@ -338,13 +341,19 @@ class Glow(nn.Module):
             self, in_channel, n_flow, n_block, affine=True, conv_lu=True
     ):
         super().__init__()
-
+        logging.basicConfig(level=LOGGING_LEVEL)
+        logger = logging.getLogger(self.__class__.__name__)
         self.blocks = nn.ModuleList()
         n_channel = in_channel
         for i in range(n_block - 1):
-            self.blocks.append(Block(n_channel, n_flow, affine=affine, conv_lu=conv_lu))
+            b = Block(n_channel, n_flow, affine=affine, conv_lu=conv_lu)
+            self.blocks.append(b)
+            logger.debug(f'In {self.__class__.__name__} init, for block {i} , conv_lu = {b.conv_lu}')
             n_channel *= 2
-        self.blocks.append(Block(n_channel, n_flow, split=False, affine=affine))
+        # Make the last block with the biggest W use full matrix, not LU
+        b = Block(n_channel, n_flow, split=False, affine=affine,conv_lu=False)
+        self.blocks.append(b)
+        logger.debug(f'In {self.__class__.__name__} init, for block {i + 1} , conv_lu = {b.conv_lu}')
 
     def forward(self, input):
         log_p_sum = 0
