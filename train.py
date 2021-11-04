@@ -1,20 +1,23 @@
 import argparse
 import logging
+from datetime import datetime, timedelta
 from math import log
+from time import time
 
 import torch
-from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, utils
 from tqdm import tqdm
 
 from model import Glow, InvConv2d, InvConv2dLU
 
+LOGGING_LEVEL = logging.DEBUG
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LOGGING_LEVEL = logging.DEBUG
 parser = argparse.ArgumentParser(description="Glow trainer")
 parser.add_argument("--batch", default=16, type=int, help="batch size")
-parser.add_argument("--iter", default=1, type=int, help="maximum iterations")
+parser.add_argument("--iter", default=200, type=int, help="maximum iterations")
+
 parser.add_argument(
     "--n_flow", default=32, type=int, help="number of flows in each block"
 )
@@ -91,6 +94,9 @@ def calc_loss(log_p, logdet, image_size, n_bins):
 
 
 def train(args, model, optimizer):
+    logging.basicConfig(level=LOGGING_LEVEL)
+    logger = logging.getLogger(train.__name__)
+
     dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
 
@@ -99,9 +105,10 @@ def train(args, model, optimizer):
     for z in z_shapes:
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
-
+    exec_time_total = 0.0
     with tqdm(range(args.iter)) as pbar:
         for i in pbar:
+            start_time = time()
             image, _ = next(dataset)
             image = image.to(device)
 
@@ -154,6 +161,13 @@ def train(args, model, optimizer):
                 torch.save(
                     optimizer.state_dict(), f"checkpoint/optim_{str(i + 1).zfill(6)}.pt"
                 )
+            end_time = time()
+            exec_time_total += end_time - start_time
+            avg_exec_time = float(exec_time_total) / (i + 1)
+            logger.debug(f'\nFor iteration {i} out of {args.iter} , average execution time so far is '
+                         f'{avg_exec_time} seconds\n')
+            logger.debug(
+                f'\nexpected finish time = {datetime.now() + timedelta(seconds=(args.iter - i) * avg_exec_time)}\n')
 
 
 
@@ -169,8 +183,6 @@ def play_w_model(model):
             elif isinstance(f.invconv, InvConv2dLU):
                 logger.debug(f'flow[{j}] is of type {str(InvConv2dLU)} with wp,wu,wl of size of sizes'
                              f'{f.invconv.w_p.size(), f.invconv.w_u.size(), f.invconv.w_l.size()}')
-
-
 def dump_conv_W(model):
     logging.basicConfig(level=LOGGING_LEVEL)
     logger = logging.getLogger(dump_conv_W.__name__)
