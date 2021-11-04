@@ -5,15 +5,16 @@ from math import log
 from time import time
 
 import torch
+from torch import optim, nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, utils
 from tqdm import tqdm
 
 from model import Glow, InvConv2d, InvConv2dLU
 
-LOGGING_LEVEL = logging.DEBUG
+LOGGING_LEVEL = logging.INFO
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-LOGGING_LEVEL = logging.DEBUG
+
 parser = argparse.ArgumentParser(description="Glow trainer")
 parser.add_argument("--batch", default=16, type=int, help="batch size")
 parser.add_argument("--iter", default=200, type=int, help="maximum iterations")
@@ -170,7 +171,6 @@ def train(args, model, optimizer):
                 f'\nexpected finish time = {datetime.now() + timedelta(seconds=(args.iter - i) * avg_exec_time)}\n')
 
 
-
 def play_w_model(model):
     logging.basicConfig(level=LOGGING_LEVEL)
     logger = logging.getLogger(play_w_model.__name__)
@@ -183,19 +183,21 @@ def play_w_model(model):
             elif isinstance(f.invconv, InvConv2dLU):
                 logger.debug(f'flow[{j}] is of type {str(InvConv2dLU)} with wp,wu,wl of size of sizes'
                              f'{f.invconv.w_p.size(), f.invconv.w_u.size(), f.invconv.w_l.size()}')
-def dump_conv_W(model):
+
+
+def dump_conv_w(model_):
     logging.basicConfig(level=LOGGING_LEVEL)
-    logger = logging.getLogger(dump_conv_W.__name__)
-    logger.debug(f'model has {len(model.module.blocks)} blocks')
-    for i, b in enumerate(model.module.blocks):
-        logger.debug(f'block[{i}] has {len(b.flows)} flow')
+    logger_ = logging.getLogger(dump_conv_w.__name__)
+    logger_.debug(f'model has {len(model_.module.blocks)} blocks')
+    for i, b in enumerate(model_.module.blocks):
+        logger_.debug(f'block[{i}] has {len(b.flows)} flow')
         for j, f in enumerate(b.flows):
             if isinstance(f.invconv, InvConv2d):
-                logger.debug(
+                logger_.debug(
                     f'flow[{j}] is of type {str(InvConv2d)} with weight of mean {torch.mean(f.invconv.weight)}')
             elif isinstance(f.invconv, InvConv2dLU):
-                logger.debug(f'flow[{j}] is of type {str(InvConv2dLU)} with wp,wu,wl of ,means'
-                             f'{torch.mean(f.invconv.w_p), torch.mean(f.invconv.w_u), torch.mean(f.invconv.w_l)}')
+                logger_.debug(f'flow[{j}] is of type {str(InvConv2dLU)} with wp,wu,wl of ,means'
+                              f'{torch.mean(f.invconv.w_p), torch.mean(f.invconv.w_u), torch.mean(f.invconv.w_l)}')
 
 
 if __name__ == "__main__":
@@ -220,12 +222,12 @@ if __name__ == "__main__":
     logger.debug(f'model instance is of type {type(model)}')
 
     logger.debug(f'dump conv w before train')
-    dump_conv_W(model)
+    dump_conv_w(model)
 
     train(args, model, optimizer)
     # todo : model weights after training should be diff than before , given sufficient iter (sanity check)
     logger.debug(f'dump conv w after train')
-    dump_conv_W(model)
+    dump_conv_w(model)
 
     # https://pytorch.org/tutorials/beginner/saving_loading_models.html
     path = './model_single.dict'
