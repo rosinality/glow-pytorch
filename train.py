@@ -1,6 +1,5 @@
 import argparse
 import logging
-import sys
 from math import log
 
 import torch
@@ -15,7 +14,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LOGGING_LEVEL = logging.DEBUG
 parser = argparse.ArgumentParser(description="Glow trainer")
 parser.add_argument("--batch", default=16, type=int, help="batch size")
-parser.add_argument("--iter", default=200, type=int, help="maximum iterations")
+parser.add_argument("--iter", default=1, type=int, help="maximum iterations")
 parser.add_argument(
     "--n_flow", default=32, type=int, help="number of flows in each block"
 )
@@ -157,6 +156,7 @@ def train(args, model, optimizer):
                 )
 
 
+
 def play_w_model(model):
     logging.basicConfig(level=LOGGING_LEVEL)
     logger = logging.getLogger(play_w_model.__name__)
@@ -168,7 +168,22 @@ def play_w_model(model):
                 logger.debug(f'flow[{j}] is of type {str(InvConv2d)} with weight of size {f.invconv.weight.size()}')
             elif isinstance(f.invconv, InvConv2dLU):
                 logger.debug(f'flow[{j}] is of type {str(InvConv2dLU)} with wp,wu,wl of size of sizes'
-                      f'{f.invconv.w_p.size(),f.invconv.w_u.size(),f.invconv.w_l.size()}')
+                             f'{f.invconv.w_p.size(), f.invconv.w_u.size(), f.invconv.w_l.size()}')
+
+
+def dump_conv_W(model):
+    logging.basicConfig(level=LOGGING_LEVEL)
+    logger = logging.getLogger(dump_conv_W.__name__)
+    logger.debug(f'model has {len(model.module.blocks)} blocks')
+    for i, b in enumerate(model.module.blocks):
+        logger.debug(f'block[{i}] has {len(b.flows)} flow')
+        for j, f in enumerate(b.flows):
+            if isinstance(f.invconv, InvConv2d):
+                logger.debug(
+                    f'flow[{j}] is of type {str(InvConv2d)} with weight of mean {torch.mean(f.invconv.weight)}')
+            elif isinstance(f.invconv, InvConv2dLU):
+                logger.debug(f'flow[{j}] is of type {str(InvConv2dLU)} with wp,wu,wl of ,means'
+                             f'{torch.mean(f.invconv.w_p), torch.mean(f.invconv.w_u), torch.mean(f.invconv.w_l)}')
 
 
 if __name__ == "__main__":
@@ -180,14 +195,30 @@ if __name__ == "__main__":
         3, args.n_flow, args.n_block, affine=args.affine, conv_lu=False
     )
     # play with model_single
-    play_w_model(model_single)
+    # play_w_model(model_single)
     # FIXME remove
-    logger.debug('Premature exit !!!')
-    sys.exit(-1)
-    # model = nn.DataParallel(model_single)
-    # # model = model_single
-    # model = model.to(device)
-    #
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    #
-    # train(args, model, optimizer)
+    # logger.debug('Premature exit !!!')
+    # sys.exit(-1)
+    model = nn.DataParallel(model_single)
+    # model = model_single
+    model = model.to(device)
+
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    logger.debug(f'model-single instance is of type {type(model_single)}')
+    logger.debug(f'model instance is of type {type(model)}')
+
+    logger.debug(f'dump conv w before train')
+    dump_conv_W(model)
+
+    train(args, model, optimizer)
+    # todo : model weights after training should be diff than before , given sufficient iter (sanity check)
+    logger.debug(f'dump conv w after train')
+    dump_conv_W(model)
+
+    # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+    path = './model_single.dict'
+    torch.save(model.module.state_dict(), path)
+    model_module_loaded = Glow(
+        3, args.n_flow, args.n_block, affine=args.affine, conv_lu=False
+    )
+    model_module_loaded.load_state_dict(torch.load(path))
