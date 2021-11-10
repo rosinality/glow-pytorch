@@ -7,8 +7,10 @@ from scipy import linalg as la
 from torch import nn
 from torch.nn import functional as F
 
+from utils import svd_decomp_trunc, pinv
+
 logabs = lambda x: torch.log(torch.abs(x))
-LOGGING_LEVEL = logging.DEBUG
+LOGGING_LEVEL = logging.INFO
 
 
 class ActNorm(nn.Module):
@@ -66,7 +68,8 @@ class ActNorm(nn.Module):
 class InvConv2d(nn.Module):
     def __init__(self, in_channel):
         super().__init__()
-
+        logging.basicConfig(level=logging.DEBUG)
+        self.logger = logging.getLogger(self.__class__.__name__)
         weight = torch.randn(in_channel, in_channel)
         q, _ = torch.qr(weight)
         weight = q.unsqueeze(2).unsqueeze(3)
@@ -83,12 +86,83 @@ class InvConv2d(nn.Module):
         return out, logdet
 
     def reverse(self, output):
+        # experiment
+        # 1) replace weight with weight_svd_reconstructed
+        # 2) replace inverse with SVD pseudo inverse
+        weight_squeezed = self.weight.squeeze().detach().numpy()
+        r = weight_squeezed.shape[0] - 2
+        w_inv = pinv(weight_squeezed, r)
+        weight_squeezed_star = svd_decomp_trunc(weight_squeezed, r)
+        # norm_ = np.linalg.norm(weight_squeezed-weight_squeezed_star)
+        # self.weight = nn.Parameter(torch.tensor(weight_squeezed_star).unsqueeze(2).unsqueeze(3))
+        # w_det1 = np.linalg.det(self.weight.squeeze().detach().numpy())
+        # w_det2 = np.linalg.det(weight_squeezed_star)
+        w_dummy = self.weight.squeeze().inverse().unsqueeze(2).unsqueeze(3)
+        winv_tensor = torch.tensor(w_inv).unsqueeze(2).unsqueeze(3)
+        x1 = w_dummy.squeeze().detach().numpy()
+        x2 = winv_tensor.squeeze().detach().numpy()
+        norm2_ = np.linalg.norm(x1 - x2)
+        # return F.conv2d(
+        #     output, self.weight.squeeze().inverse().unsqueeze(2).unsqueeze(3)
+        # )
         return F.conv2d(
-            output, self.weight.squeeze().inverse().unsqueeze(2).unsqueeze(3)
+            output, winv_tensor
         )
 
 
 class InvConv2dLU(nn.Module):
+    def __init__(self, in_channel):
+        super().__init__()
+        # print(f'InvConv2dLU constructor with in_channel = {in_channel}')
+        weight = np.random.randn(in_channel, in_channel)
+        q, _ = la.qr(weight)
+        w_p, w_l, w_u = la.lu(q.astype(np.float32))
+        w_s = np.diag(w_u)
+        w_u = np.triu(w_u, 1)
+        u_mask = np.triu(np.ones_like(w_u), 1)
+        l_mask = u_mask.T
+
+        w_p = torch.from_numpy(w_p)
+        w_l = torch.from_numpy(w_l)
+        w_s = torch.from_numpy(w_s)
+        w_u = torch.from_numpy(w_u)
+
+        self.register_buffer("w_p", w_p)
+        self.register_buffer("u_mask", torch.from_numpy(u_mask))
+        self.register_buffer("l_mask", torch.from_numpy(l_mask))
+        self.register_buffer("s_sign", torch.sign(w_s))
+        self.register_buffer("l_eye", torch.eye(l_mask.shape[0]))
+        self.w_l = nn.Parameter(w_l)
+        self.w_s = nn.Parameter(logabs(w_s))
+        self.w_u = nn.Parameter(w_u)
+
+    def forward(self, input):
+        _, _, height, width = input.shape
+
+        weight = self.calc_weight()
+
+        out = F.conv2d(input, weight)
+        logdet = height * width * torch.sum(self.w_s)
+
+        return out, logdet
+
+    def calc_weight(self):
+        weight = (
+                self.w_p
+                @ (self.w_l * self.l_mask + self.l_eye)
+                @ ((self.w_u * self.u_mask) + torch.diag(self.s_sign * torch.exp(self.w_s)))
+        )
+
+        return weight.unsqueeze(2).unsqueeze(3)
+
+    def reverse(self, output):
+        weight = self.calc_weight()
+
+        return F.conv2d(output, weight.squeeze().inverse().unsqueeze(2).unsqueeze(3))
+
+
+# TODO my conv unit !
+class InvConv2dSVD(nn.Module):
     def __init__(self, in_channel):
         super().__init__()
         # print(f'InvConv2dLU constructor with in_channel = {in_channel}')
@@ -351,7 +425,7 @@ class Glow(nn.Module):
             logger.debug(f'In {self.__class__.__name__} init, for block {i} , conv_lu = {b.conv_lu}')
             n_channel *= 2
         # Make the last block with the biggest W use full matrix, not LU
-        b = Block(n_channel, n_flow, split=False, affine=affine,conv_lu=False)
+        b = Block(n_channel, n_flow, split=False, affine=affine, conv_lu=conv_lu)
         self.blocks.append(b)
         logger.debug(f'In {self.__class__.__name__} init, for block {i + 1} , conv_lu = {b.conv_lu}')
 

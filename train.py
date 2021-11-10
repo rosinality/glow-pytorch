@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 from datetime import datetime, timedelta
 from math import log
 from time import time
@@ -17,7 +18,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser(description="Glow trainer")
 parser.add_argument("--batch", default=16, type=int, help="batch size")
-parser.add_argument("--iter", default=200, type=int, help="maximum iterations")
+parser.add_argument("--iter", default=10000, type=int, help="maximum iterations")
 
 parser.add_argument(
     "--n_flow", default=32, type=int, help="number of flows in each block"
@@ -101,6 +102,15 @@ def train(args, model, optimizer):
     dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
 
+    # create checkpoint and samples dir for a specific run
+    curr_datetime = str(datetime.now().isoformat())
+    checkpoint_dir = f'checkpoint_{curr_datetime}'
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+    samples_dir = f'samples_{curr_datetime}'
+    if not os.path.exists(samples_dir):
+        os.makedirs(samples_dir)
+    ###
     z_sample = []
     z_shapes = calc_z_shapes(3, args.img_size, args.n_flow, args.n_block)
     for z in z_shapes:
@@ -148,26 +158,28 @@ def train(args, model, optimizer):
             if i % 100 == 0:
                 with torch.no_grad():
                     utils.save_image(
-                        model_single.reverse(z_sample).cpu().data,
-                        f"sample/{str(i + 1).zfill(6)}.png",
+                        model.module.reverse(z_sample).cpu().data,
+                        f"{samples_dir}/{str(i + 1).zfill(6)}.png",
                         normalize=True,
                         nrow=10,
                         range=(-0.5, 0.5),
                     )
-
-            if i % 10000 == 0:
+            # save model
+            if (i + 1) % 2000 == 0:
+                logger.info(f'\ntype of model to save{type(model)}\n')
                 torch.save(
-                    model.state_dict(), f"checkpoint/model_{str(i + 1).zfill(6)}.pt"
+                    model.state_dict(), f"{checkpoint_dir}/model_{str(i + 1).zfill(6)}.pt"
                 )
+                logger.info(f'\ntype of optimizer to save {type(optimizer)}\n')
                 torch.save(
-                    optimizer.state_dict(), f"checkpoint/optim_{str(i + 1).zfill(6)}.pt"
+                    optimizer.state_dict(), f"{checkpoint_dir}/optim_{str(i + 1).zfill(6)}.pt"
                 )
             end_time = time()
             exec_time_total += end_time - start_time
             avg_exec_time = float(exec_time_total) / (i + 1)
-            logger.debug(f'\nFor iteration {i} out of {args.iter} , average execution time so far is '
-                         f'{avg_exec_time} seconds\n')
-            logger.debug(
+            logger.info(f'\nFor iteration {i} out of {args.iter} , average execution time so far is '
+                        f'{avg_exec_time} seconds\n')
+            logger.info(
                 f'\nexpected finish time = {datetime.now() + timedelta(seconds=(args.iter - i) * avg_exec_time)}\n')
 
 
@@ -200,26 +212,41 @@ def dump_conv_w(model_):
                               f'{torch.mean(f.invconv.w_p), torch.mean(f.invconv.w_u), torch.mean(f.invconv.w_l)}')
 
 
+def init_model_optim(checkpoint_dir, model_dict_file, optim_dict_file, n_flow, n_block, affine, conv_lu, lr):
+    model_single = Glow(3, n_flow, n_block, affine=affine, conv_lu=conv_lu)
+
+    model = nn.DataParallel(model_single)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    model.load_state_dict(torch.load(f'{checkpoint_dir}/{model_dict_file}'))
+    model.to(device)
+    optimizer.load_state_dict(torch.load(f'{checkpoint_dir}/{optim_dict_file}'))
+    return model, optimizer
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=LOGGING_LEVEL)
     logger = logging.getLogger(__name__)
     args = parser.parse_args()
     logger.info(args)
-    model_single = Glow(
-        3, args.n_flow, args.n_block, affine=args.affine, conv_lu=False
-    )
+    conv_lu = False
+    # model_single = Glow(3, args.n_flow, args.n_block, affine=args.affine, conv_lu=conv_lu)
     # play with model_single
     # play_w_model(model_single)
     # FIXME remove
     # logger.debug('Premature exit !!!')
     # sys.exit(-1)
-    model = nn.DataParallel(model_single)
+    # model = nn.DataParallel(model_single)
     # model = model_single
-    model = model.to(device)
+    # model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    logger.debug(f'model-single instance is of type {type(model_single)}')
-    logger.debug(f'model instance is of type {type(model)}')
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    checkpoint_dir = 'checkpoint_2021-11-06T18:55:15.067029'
+    model_dict_file = 'model_006000.pt'
+    optim_dict_file = 'optim_006000.pt'
+    model, optimizer = init_model_optim(checkpoint_dir, model_dict_file, optim_dict_file, args.n_flow, args.n_block,
+                                        args.affine, conv_lu,args.lr)
+    # logger.debug(f'model-single instance is of type {type(model_single)}')
+    # logger.debug(f'model instance is of type {type(model)}')
 
     logger.debug(f'dump conv w before train')
     dump_conv_w(model)
@@ -228,11 +255,3 @@ if __name__ == "__main__":
     # todo : model weights after training should be diff than before , given sufficient iter (sanity check)
     logger.debug(f'dump conv w after train')
     dump_conv_w(model)
-
-    # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-    path = './model_single.dict'
-    torch.save(model.module.state_dict(), path)
-    model_module_loaded = Glow(
-        3, args.n_flow, args.n_block, affine=args.affine, conv_lu=False
-    )
-    model_module_loaded.load_state_dict(torch.load(path))
