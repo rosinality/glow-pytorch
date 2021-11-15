@@ -233,6 +233,7 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     args = parser.parse_args()
     logger.info(args)
+
     conv_lu = False
     model_single = Glow(3, args.n_flow, args.n_block, affine=args.affine, conv_lu=conv_lu)
     # play with model_single# model = model_single
