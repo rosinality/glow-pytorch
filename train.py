@@ -21,9 +21,9 @@ parser.add_argument("--batch", default=16, type=int, help="batch size")
 parser.add_argument("--iter", default=10000, type=int, help="maximum iterations")
 
 parser.add_argument(
-    "--n_flow", default=128, type=int, help="number of flows in each block"
+    "--n_flow", default=64, type=int, help="number of flows in each block"
 )
-parser.add_argument("--n_block", default=32, type=int, help="number of blocks")
+parser.add_argument("--n_block", default=8, type=int, help="number of blocks")
 
 parser.add_argument(
     "--no_lu",
