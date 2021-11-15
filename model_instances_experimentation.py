@@ -1,11 +1,37 @@
-import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torchvision.utils
 from torch import nn
 
 from model import Glow
 from train import calc_z_shapes
-from utils import svd_decomp_trunc
+
+
+def rank_norm(model):
+    rank_norm_dict = dict()
+    for f in model.module.blocks[3].flows:
+        w = f.invconv.weight.squeeze()
+        u, s, vh = torch.linalg.svd(w)
+        for r in range(1, s.shape[0] + 1):
+            m1 = torch.matmul(u[:, :r], torch.diag(s[:r]))
+            w_ = torch.matmul(m1, vh[:r, :])
+            rel_norm = torch.norm(w - w_) / torch.norm(w)
+            if r in rank_norm_dict.keys():
+                rel_norm_old, cnt = rank_norm_dict[r]
+                rank_norm_dict[r] = rel_norm_old + rel_norm.item(), cnt + 1
+            else:
+                rank_norm_dict[r] = rel_norm.item(), 1
+    x = []
+    y= []
+    for k in rank_norm_dict.keys():
+        x.append(k)
+        y.append(rank_norm_dict[k][0]/rank_norm_dict[k][1])
+    plt.plot(x,y)
+    plt.title("Truncation Rank vs rel-norm loss")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.show()
+
 
 if __name__ == '__main__':
     n_sample = 20
@@ -23,13 +49,13 @@ if __name__ == '__main__':
     # print(type(checkpoint))
     # model.load_state_dict(checkpoint['model_state_dict'])
     model.load_state_dict(torch.load('checkpoint_2021-11-07T14:25:53.737008/model_006000.pt'))
-    print(model.module.blocks[3].flows[0].invconv.weight.size())
-    print(type(model.module.blocks[3].flows[0].invconv.weight[:, :, 0, 0].detach().cpu().numpy().shape))
-    w_ = model.module.blocks[3].flows[0].invconv.weight[:, :, 0, 0].detach().cpu().numpy()
+    # print(model.module.blocks[3].flows[0].invconv.weight.size())
+    # print(type(model.module.blocks[3].flows[0].invconv.weight[:, :, 0, 0].detach().cpu().numpy().shape))
+    # w_ = model.module.blocks[3].flows[0].invconv.weight[:, :, 0, 0].detach().cpu().numpy()
     z_sample = []
     z_shapes = calc_z_shapes(3, img_size, n_flow, n_block)
     print('generating sample image')
-    gen_sample_img_path = './gen_sample8.png'
+    gen_sample_img_path = './gen_sample9.png'
     for z in z_shapes:
         z_new = torch.randn(n_sample, *z) * temp
         z_sample.append(z_new.to(device))
@@ -53,6 +79,9 @@ if __name__ == '__main__':
     #     for r in np.arange(2, w.shape[0] + 1):
     #         w_star = svd_reconstruct(w, r)
     #         print(f'r={r},norm = {np.linalg.norm(w - w_star)}')
-
+    # TODO
     # replace w in each flow by w_ reconstruct
     # measure difference visually and then numerically (numerical measures for nf quality , bits of info i think ??)
+
+    # experiment 1 :
+    rank_norm(model)
