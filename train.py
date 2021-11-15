@@ -21,9 +21,10 @@ parser.add_argument("--batch", default=16, type=int, help="batch size")
 parser.add_argument("--iter", default=10000, type=int, help="maximum iterations")
 
 parser.add_argument(
-    "--n_flow", default=32, type=int, help="number of flows in each block"
+    "--n_flow", default=128, type=int, help="number of flows in each block"
 )
-parser.add_argument("--n_block", default=4, type=int, help="number of blocks")
+parser.add_argument("--n_block", default=32, type=int, help="number of blocks")
+
 parser.add_argument(
     "--no_lu",
     action="store_true",
@@ -165,7 +166,7 @@ def train(args, model, optimizer):
                         range=(-0.5, 0.5),
                     )
             # save model
-            if (i + 1) % 2000 == 0:
+            if (i + 1) % 500 == 0:
                 logger.info(f'\ntype of model to save{type(model)}\n')
                 torch.save(
                     model.state_dict(), f"{checkpoint_dir}/model_{str(i + 1).zfill(6)}.pt"
@@ -213,6 +214,10 @@ def dump_conv_w(model_):
 
 
 def init_model_optim(checkpoint_dir, model_dict_file, optim_dict_file, n_flow, n_block, affine, conv_lu, lr):
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(init_model_optim.__name__)
+    logger.info(f'loaded models from checkpoint dir {checkpoint_dir} , model file {model_dict_file} '
+                f'opt dict file {optim_dict_file}')
     model_single = Glow(3, n_flow, n_block, affine=affine, conv_lu=conv_lu)
 
     model = nn.DataParallel(model_single)
@@ -229,27 +234,27 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.info(args)
     conv_lu = False
-    # model_single = Glow(3, args.n_flow, args.n_block, affine=args.affine, conv_lu=conv_lu)
-    # play with model_single
+    model_single = Glow(3, args.n_flow, args.n_block, affine=args.affine, conv_lu=conv_lu)
+    # play with model_single# model = model_single
+    # model = model.to(device)
     # play_w_model(model_single)
     # FIXME remove
     # logger.debug('Premature exit !!!')
     # sys.exit(-1)
-    # model = nn.DataParallel(model_single)
-    # model = model_single
-    # model = model.to(device)
+    model = nn.DataParallel(model_single)
 
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    checkpoint_dir = 'checkpoint_2021-11-06T18:55:15.067029'
-    model_dict_file = 'model_006000.pt'
-    optim_dict_file = 'optim_006000.pt'
-    model, optimizer = init_model_optim(checkpoint_dir, model_dict_file, optim_dict_file, args.n_flow, args.n_block,
-                                        args.affine, conv_lu,args.lr)
-    # logger.debug(f'model-single instance is of type {type(model_single)}')
-    # logger.debug(f'model instance is of type {type(model)}')
+    # model = model_single
+    model = model.to(device)
+
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # checkpoint_dir = 'checkpoint_2021-11-10T11:22:05.323986'
+    # model_dict_file = 'model_010000.pt'
+    # optim_dict_file = 'optim_010000.pt'
+    # model, optimizer = init_model_optim(checkpoint_dir, model_dict_file, optim_dict_file, args.n_flow, args.n_block,
+    #                                     args.affine, conv_lu, args.lr)
 
     logger.debug(f'dump conv w before train')
-    dump_conv_w(model)
+    #dump_conv_w(model)
 
     train(args, model, optimizer)
     # todo : model weights after training should be diff than before , given sufficient iter (sanity check)
