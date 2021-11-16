@@ -12,6 +12,7 @@ from torchvision import datasets, transforms, utils
 from tqdm import tqdm
 
 from model import Glow, InvConv2d, InvConv2dLU
+from utils import tensor_stat
 
 LOGGING_LEVEL = logging.INFO
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -21,9 +22,9 @@ parser.add_argument("--batch", default=16, type=int, help="batch size")
 parser.add_argument("--iter", default=10000, type=int, help="maximum iterations")
 
 parser.add_argument(
-    "--n_flow", default=64, type=int, help="number of flows in each block"
+    "--n_flow", default=32, type=int, help="number of flows in each block"
 )
-parser.add_argument("--n_block", default=8, type=int, help="number of blocks")
+parser.add_argument("--n_block", default=4, type=int, help="number of blocks")
 
 parser.add_argument(
     "--no_lu",
@@ -122,14 +123,15 @@ def train(args, model, optimizer):
         for i in pbar:
             start_time = time()
             image, _ = next(dataset)
+            stat_1 = tensor_stat(image)
             image = image.to(device)
-
             image = image * 255
-
+            stat_2 = tensor_stat(image)
             if args.n_bits < 8:
                 image = torch.floor(image / 2 ** (8 - args.n_bits))
 
             image = image / n_bins - 0.5
+            stat_3 = tensor_stat(image)
 
             if i == 0:
                 with torch.no_grad():
@@ -255,7 +257,7 @@ if __name__ == "__main__":
     #                                     args.affine, conv_lu, args.lr)
 
     logger.debug(f'dump conv w before train')
-    #dump_conv_w(model)
+    # dump_conv_w(model)
 
     train(args, model, optimizer)
     # todo : model weights after training should be diff than before , given sufficient iter (sanity check)
