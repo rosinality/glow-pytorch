@@ -1,11 +1,14 @@
+import logging
+from math import log, pi
+
+import numpy as np
 import torch
+from scipy import linalg as la
 from torch import nn
 from torch.nn import functional as F
-from math import log, pi, exp
-import numpy as np
-from scipy import linalg as la
 
 logabs = lambda x: torch.log(torch.abs(x))
+LOGGING_LEVEL = logging.DEBUG
 
 
 class ActNorm(nn.Module):
@@ -23,17 +26,17 @@ class ActNorm(nn.Module):
             flatten = input.permute(1, 0, 2, 3).contiguous().view(input.shape[1], -1)
             mean = (
                 flatten.mean(1)
-                .unsqueeze(1)
-                .unsqueeze(2)
-                .unsqueeze(3)
-                .permute(1, 0, 2, 3)
+                    .unsqueeze(1)
+                    .unsqueeze(2)
+                    .unsqueeze(3)
+                    .permute(1, 0, 2, 3)
             )
             std = (
                 flatten.std(1)
-                .unsqueeze(1)
-                .unsqueeze(2)
-                .unsqueeze(3)
-                .permute(1, 0, 2, 3)
+                    .unsqueeze(1)
+                    .unsqueeze(2)
+                    .unsqueeze(3)
+                    .permute(1, 0, 2, 3)
             )
 
             self.loc.data.copy_(-mean)
@@ -60,6 +63,31 @@ class ActNorm(nn.Module):
         return output / self.scale - self.loc
 
 
+class InvConv2dSVD(nn.Module):
+    def __init__(self, in_channel):
+        super().__init__()
+
+        weight = torch.randn(in_channel, in_channel)
+        q, _ = torch.qr(weight)
+        weight = q.unsqueeze(2).unsqueeze(3)
+        self.weight = nn.Parameter(weight)
+
+    def forward(self, input):
+        _, _, height, width = input.shape
+
+        out = F.conv2d(input, self.weight)
+        logdet = (
+                height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
+        )
+
+        return out, logdet
+
+    def reverse(self, output):
+        return F.conv2d(
+            output, self.weight.squeeze().inverse().unsqueeze(2).unsqueeze(3)
+        )
+
+
 class InvConv2d(nn.Module):
     def __init__(self, in_channel):
         super().__init__()
@@ -74,7 +102,7 @@ class InvConv2d(nn.Module):
 
         out = F.conv2d(input, self.weight)
         logdet = (
-            height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
+                height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
         )
 
         return out, logdet
@@ -88,7 +116,7 @@ class InvConv2d(nn.Module):
 class InvConv2dLU(nn.Module):
     def __init__(self, in_channel):
         super().__init__()
-
+        # print(f'InvConv2dLU constructor with in_channel = {in_channel}')
         weight = np.random.randn(in_channel, in_channel)
         q, _ = la.qr(weight)
         w_p, w_l, w_u = la.lu(q.astype(np.float32))
@@ -123,9 +151,9 @@ class InvConv2dLU(nn.Module):
 
     def calc_weight(self):
         weight = (
-            self.w_p
-            @ (self.w_l * self.l_mask + self.l_eye)
-            @ ((self.w_u * self.u_mask) + torch.diag(self.s_sign * torch.exp(self.w_s)))
+                self.w_p
+                @ (self.w_l * self.l_mask + self.l_eye)
+                @ ((self.w_u * self.u_mask) + torch.diag(self.s_sign * torch.exp(self.w_s)))
         )
 
         return weight.unsqueeze(2).unsqueeze(3)
@@ -215,12 +243,13 @@ class Flow(nn.Module):
 
         self.actnorm = ActNorm(in_channel)
 
-        if conv_lu:
-            self.invconv = InvConv2dLU(in_channel)
-
-        else:
-            self.invconv = InvConv2d(in_channel)
-
+        # if conv_lu:
+        #     self.invconv = InvConv2dLU(in_channel)
+        #
+        # else:
+        #     self.invconv = InvConv2d(in_channel)
+        self.invconv = InvConv2dSVD(in_channel)
+        # TODO add InvConv2dSVD
         self.coupling = AffineCoupling(in_channel, affine=affine)
 
     def forward(self, input):
@@ -257,6 +286,7 @@ class Block(nn.Module):
         squeeze_dim = in_channel * 4
 
         self.flows = nn.ModuleList()
+        self.conv_lu = conv_lu
         for i in range(n_flow):
             self.flows.append(Flow(squeeze_dim, affine=affine, conv_lu=conv_lu))
 
@@ -270,6 +300,7 @@ class Block(nn.Module):
 
     def forward(self, input):
         b_size, n_channel, height, width = input.shape
+        squeezed = input.view(b_size, n_channel, height // 2, 2, width // 2, 2)
         squeezed = input.view(b_size, n_channel, height // 2, 2, width // 2, 2)
         squeezed = squeezed.permute(0, 1, 3, 5, 2, 4)
         out = squeezed.contiguous().view(b_size, n_channel * 4, height // 2, width // 2)
@@ -334,16 +365,22 @@ class Block(nn.Module):
 
 class Glow(nn.Module):
     def __init__(
-        self, in_channel, n_flow, n_block, affine=True, conv_lu=True
+            self, in_channel, n_flow, n_block, affine=True, conv_lu=True
     ):
         super().__init__()
-
+        logging.basicConfig(level=LOGGING_LEVEL)
+        logger = logging.getLogger(self.__class__.__name__)
         self.blocks = nn.ModuleList()
         n_channel = in_channel
         for i in range(n_block - 1):
-            self.blocks.append(Block(n_channel, n_flow, affine=affine, conv_lu=conv_lu))
+            b = Block(n_channel, n_flow, affine=affine, conv_lu=conv_lu)
+            self.blocks.append(b)
+            logger.debug(f'In {self.__class__.__name__} init, for block {i} , conv_lu = {b.conv_lu}')
             n_channel *= 2
-        self.blocks.append(Block(n_channel, n_flow, split=False, affine=affine))
+        # Make the last block with the biggest W use full matrix, not LU
+        b = Block(n_channel, n_flow, split=False, affine=affine, conv_lu=False)
+        self.blocks.append(b)
+        logger.debug(f'In {self.__class__.__name__} init, for block {i + 1} , conv_lu = {b.conv_lu}')
 
     def forward(self, input):
         log_p_sum = 0
